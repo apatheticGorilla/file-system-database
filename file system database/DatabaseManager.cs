@@ -46,11 +46,13 @@ namespace file_system_database {
 			foreach (string path in paths) {
 				folderData.Add(new FolderData(path, 0));
 			}
+			var transaction = connection.BeginTransaction();
 			AddFoldersToDatabase(folderData);
 			Dictionary<string, int> ids = FolderIDs(paths);
 			foreach (string pth in paths) {
 				scan(pth, ids[pth]);
 			}
+			transaction.Commit();
 		}
 
 		private void scan(string path, int parentIndex) {
@@ -63,13 +65,18 @@ namespace file_system_database {
 
 			List<FileData> fileData = new();
 			List<FolderData> folderData = new();
-			
+
 			string[] paths;
 			try {
 				paths = Directory.GetDirectories(path);
 			}
-			catch (UnauthorizedAccessException){
+			catch (UnauthorizedAccessException) {
 				Console.WriteLine("Access Denied: {0}", path);
+				searchDepth--;
+				return;
+			}
+			catch (FileNotFoundException) {
+				Console.WriteLine("Could not Find: {0}",path);
 				searchDepth--;
 				return;
 			}
@@ -86,14 +93,14 @@ namespace file_system_database {
 			AddFoldersToDatabase(folderData);
 			//int[] folderIDs = FolderIDs(paths);
 			Dictionary<string, int> folderIds = FolderIDs(paths);
-			foreach(string pth in paths) {
+			foreach (string pth in paths) {
 				scan(pth, folderIds[pth]);
 			}
 			searchDepth--;
 		}
 
 		void AddFilesToDatabase(List<FileData> files) {
-			var transaction = connection.BeginTransaction();
+			
 			var command = connection.CreateCommand();
 			command.CommandText = "INSERT INTO files(basename, file_path, extension, size, parent) VALUES($basename, $path, $extension, $size, $parent) ";
 
@@ -122,11 +129,11 @@ namespace file_system_database {
 				paramParent.Value = data.GetParentIndex();
 				command.ExecuteNonQueryAsync();
 			}
-			transaction.Commit();
+			
 		}
 
 		void AddFoldersToDatabase(List<FolderData> folders) {
-			var transaction = connection.BeginTransaction();
+			//var transaction = connection.BeginTransaction();
 			var command = connection.CreateCommand();
 			command.CommandText = "INSERT INTO folders(basename, folder_path, parent) VALUES($basename, $path, $parent) ";
 
@@ -144,16 +151,16 @@ namespace file_system_database {
 			foreach (FolderData data in folders) {
 				paramBasename.Value = data.GetName();
 				paramPath.Value = data.GetPath();
-				
+
 				paramParent.Value = data.GetParentIndex();
-				
-				
+
+
 				command.ExecuteNonQuery();
 			}
-			transaction.Commit();
+			//transaction.Commit();
 		}
 
-		Dictionary<string,int> FolderIDs(string[] folders) {
+		Dictionary<string, int> FolderIDs(string[] folders) {
 			Dictionary<string, int> ids = new();
 			if (folders.Length == 0) return ids;
 			var command = connection.CreateCommand();
@@ -163,8 +170,8 @@ namespace file_system_database {
 
 			using (var reader = command.ExecuteReader()) {
 
-				while (reader.Read()) { 
-					ids.Add(reader.GetString(0),reader.GetInt32(1));
+				while (reader.Read()) {
+					ids.Add(reader.GetString(0), reader.GetInt32(1));
 				}
 			}
 			return ids;
