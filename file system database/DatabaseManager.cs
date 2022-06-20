@@ -75,7 +75,7 @@ namespace file_system_database {
 				searchDepth--;
 				return;
 			}
-			catch (FileNotFoundException) {
+			catch (DirectoryNotFoundException) {
 				Console.WriteLine("Could not Find: {0}",path);
 				searchDepth--;
 				return;
