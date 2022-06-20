@@ -91,7 +91,13 @@ namespace file_system_database {
 			}
 			AddFilesToDatabase(fileData);
 			AddFoldersToDatabase(folderData);
-			//int[] folderIDs = FolderIDs(paths);
+
+			fileData.Clear();
+			fileData.TrimExcess();
+
+			folderData.Clear();
+			folderData.TrimExcess();
+
 			Dictionary<string, int> folderIds = FolderIDs(paths);
 			foreach (string pth in paths) {
 				scan(pth, folderIds[pth]);
