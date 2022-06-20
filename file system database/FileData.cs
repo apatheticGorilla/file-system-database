@@ -20,9 +20,14 @@
 		public int GetParentIndex() { return parentIndex; }
 
 		public void findInfo() {
+			size = 0;
 			FileInfo fi = new FileInfo(path);
 			name = fi.Name;
-			size = fi.Length;
+			try {
+				size = fi.Length;
+			}catch(FileNotFoundException) {
+				//TODO logging
+			}
 			extension = fi.Extension;
 		}
 	}
