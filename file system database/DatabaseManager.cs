@@ -4,14 +4,63 @@ namespace file_system_database {
 
 	public class DatabaseManager {
 		private readonly SqliteConnection connection;
+		private SqliteCommand FileCommand;
+		private SqliteCommand DirCommand;
+		private SqliteCommand QueryCommand;
+		private SqliteParameter FparamBasename;
+		private SqliteParameter FparamPath;
+		private SqliteParameter FparamExtension;
+		private SqliteParameter FparamSize;
+		private SqliteParameter FparamParent;
+
+		private SqliteParameter DparamBasename;
+		private SqliteParameter DparamPath;
+		private SqliteParameter DparamParent;
 		private int maxDepth;
 		private int searchDepth = 0;
 
 		public DatabaseManager(string dbPath) {
 			connection = new("Data Source=" + dbPath);
 			connection.Open();
-		}
 
+		}
+		void PrepCommands() {
+			FileCommand = connection.CreateCommand();
+			FileCommand.CommandText = "INSERT INTO files(basename, file_path, extension, size, parent) VALUES($basename, $path, $extension, $size, $parent) ";
+
+			FparamBasename = FileCommand.CreateParameter();
+			FparamBasename.ParameterName = "basename";
+			FparamPath = FileCommand.CreateParameter();
+			FparamPath.ParameterName = "path";
+			FparamExtension = FileCommand.CreateParameter();
+			FparamExtension.ParameterName = "extension";
+			FparamSize = FileCommand.CreateParameter();
+			FparamSize.ParameterName = "size";
+			FparamParent = FileCommand.CreateParameter();
+			FparamParent.ParameterName = "parent";
+
+			FileCommand.Parameters.Add(FparamBasename);
+			FileCommand.Parameters.Add(FparamPath);
+			FileCommand.Parameters.Add(FparamExtension);
+			FileCommand.Parameters.Add(FparamSize);
+			FileCommand.Parameters.Add(FparamParent);
+
+			DirCommand = connection.CreateCommand();
+			DirCommand.CommandText = "INSERT INTO folders(basename, folder_path, parent) VALUES($basename, $path, $parent) ";
+
+			DparamBasename = DirCommand.CreateParameter();
+			DparamBasename.ParameterName = "basename";
+			DparamPath = DirCommand.CreateParameter();
+			DparamPath.ParameterName = "path";
+			DparamParent = DirCommand.CreateParameter();
+			DparamParent.ParameterName = "parent";
+
+			DirCommand.Parameters.Add(DparamBasename);
+			DirCommand.Parameters.Add(DparamPath);
+			DirCommand.Parameters.Add(DparamParent);
+
+			QueryCommand = connection.CreateCommand();
+		}
 		public void Create() {
 			var transaction = connection.BeginTransaction();
 			var command = connection.CreateCommand();
@@ -42,6 +91,7 @@ namespace file_system_database {
 
 		public void Update(string[] paths, int maxSearchDepth) {
 			var transaction = connection.BeginTransaction();
+			PrepCommands();
 			var command = connection.CreateCommand();
 			command.CommandText = @"DELETE FROM files;
 									DELETE FROM folders;";
@@ -52,7 +102,7 @@ namespace file_system_database {
 			foreach (string path in paths) {
 				folderData.Add(new FolderData(path, 0));
 			}
-			
+
 			command.ExecuteNonQuery();
 			AddFoldersToDatabase(folderData);
 			Dictionary<string, int> ids = FolderIDs(paths);
@@ -112,70 +162,37 @@ namespace file_system_database {
 		}
 
 		void AddFilesToDatabase(List<FileData> files) {
-			var command = connection.CreateCommand();
-			command.CommandText = "INSERT INTO files(basename, file_path, extension, size, parent) VALUES($basename, $path, $extension, $size, $parent) ";
-
-			var paramBasename = command.CreateParameter();
-			paramBasename.ParameterName = "basename";
-			var paramPath = command.CreateParameter();
-			paramPath.ParameterName = "path";
-			var paramExtension = command.CreateParameter();
-			paramExtension.ParameterName = "extension";
-			var paramSize = command.CreateParameter();
-			paramSize.ParameterName = "size";
-			var paramParent = command.CreateParameter();
-			paramParent.ParameterName = "parent";
-
-			command.Parameters.Add(paramBasename);
-			command.Parameters.Add(paramPath);
-			command.Parameters.Add(paramExtension);
-			command.Parameters.Add(paramSize);
-			command.Parameters.Add(paramParent);
 
 			foreach (FileData data in files) {
-				paramBasename.Value = data.GetName();
-				paramPath.Value = data.GetPath();
-				paramExtension.Value = data.GetExtension();
-				paramSize.Value = data.GetSize();
-				paramParent.Value = data.GetParentIndex();
-				command.ExecuteNonQueryAsync();
+				FparamBasename.Value = data.GetName();
+				FparamPath.Value = data.GetPath();
+				FparamExtension.Value = data.GetExtension();
+				FparamSize.Value = data.GetSize();
+				FparamParent.Value = data.GetParentIndex();
+				FileCommand.ExecuteNonQuery();
 			}
-			command.Dispose();
 		}
 
 		void AddFoldersToDatabase(List<FolderData> folders) {
-			var command = connection.CreateCommand();
-			command.CommandText = "INSERT INTO folders(basename, folder_path, parent) VALUES($basename, $path, $parent) ";
-
-			var paramBasename = command.CreateParameter();
-			paramBasename.ParameterName = "basename";
-			var paramPath = command.CreateParameter();
-			paramPath.ParameterName = "path";
-			var paramParent = command.CreateParameter();
-			paramParent.ParameterName = "parent";
-
-			command.Parameters.Add(paramBasename);
-			command.Parameters.Add(paramPath);
-			command.Parameters.Add(paramParent);
 
 			foreach (FolderData data in folders) {
-				paramBasename.Value = data.GetName();
-				paramPath.Value = data.GetPath();
-				paramParent.Value = data.GetParentIndex();
-				command.ExecuteNonQuery();
+				DparamBasename.Value = data.GetName();
+				DparamPath.Value = data.GetPath();
+				DparamParent.Value = data.GetParentIndex();
+				DirCommand.ExecuteNonQuery();
 			}
-			command.Dispose();
+
 		}
 
 		Dictionary<string, int> FolderIDs(string[] folders) {
 			Dictionary<string, int> ids = new();
 			if (folders.Length == 0) return ids;
-			var command = connection.CreateCommand();
+			//var command = connection.CreateCommand();
 			string query = FormatInQuery(folders);
 			//Console.WriteLine(query);
-			command.CommandText = "SELECT Folder_path, folder_id FROM folders WHERE folder_path IN(" + query + ")";
+			QueryCommand.CommandText = "SELECT Folder_path, folder_id FROM folders WHERE folder_path IN(" + query + ")";
 
-			using (var reader = command.ExecuteReader()) {
+			using (var reader = QueryCommand.ExecuteReader()) {
 
 				while (reader.Read()) {
 					ids.Add(reader.GetString(0), reader.GetInt32(1));
@@ -216,6 +233,7 @@ namespace file_system_database {
 			if (di.Parent != null) index = FolderIndex(di.Parent.ToString());
 			folderData.Add(new FolderData(path, index));
 			var transaction = connection.BeginTransaction();
+			PrepCommands();
 			AddFoldersToDatabase(folderData);
 			scan(path, FolderIndex(path));
 			transaction.Commit();
