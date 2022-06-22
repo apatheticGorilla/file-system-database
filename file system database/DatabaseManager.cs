@@ -183,6 +183,19 @@ namespace file_system_database {
 			return ids;
 		}
 
+		int FolderIndex(string folder) {
+			var command = connection.CreateCommand();
+			command.CommandText = "SELECT folder_id FROM folders WHERE folder_path = $path";
+			var paramfolder = command.CreateParameter();
+			paramfolder.ParameterName = "path";
+			paramfolder.Value = folder;
+			command.Parameters.Add(paramfolder);
+			using (var reader = command.ExecuteReader()) {
+				while(reader.Read()) return reader.GetInt32(0);
+			}
+			return 0;
+		}
+
 		string FormatInQuery(string[] items) {
 			//TODO replace with StringBuilder
 			string query = "";
@@ -196,6 +209,19 @@ namespace file_system_database {
 			return query[1..];
 		}
 
+		public void AddFolder(string path, int maxSearchDepth) {
+			maxDepth = maxSearchDepth;
+			List<FolderData> folderData = new();
+			DirectoryInfo di = new(path);
+			int index = 0; 
+
+			if (di.Parent != null) index = FolderIndex(di.Parent.ToString());
+			folderData.Add(new FolderData(path, index));
+			var transaction = connection.BeginTransaction();
+			AddFoldersToDatabase(folderData);
+			scan(path, FolderIndex(path));
+			transaction.Commit();
+		}
 	}
 
 
