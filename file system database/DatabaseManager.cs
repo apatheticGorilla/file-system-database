@@ -222,7 +222,15 @@ namespace file_system_database {
 			scan(path, FolderIndex(path));
 			transaction.Commit();
 		}
+		void vacuum() {
+			var command = connection.CreateCommand();
+			command.CommandText = "VACUUM";
+			command.ExecuteNonQuery();
+			command.Dispose();
+		}
 	}
+
+	
 
 
 }
