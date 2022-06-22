@@ -57,9 +57,8 @@ namespace file_system_database {
 
 		private void scan(string path, int parentIndex) {
 			searchDepth++;
-			if (maxDepth > 0 && searchDepth > maxDepth) {
+			if (maxDepth > 0 && searchDepth >= maxDepth) {
 				searchDepth--;
-				//TODO logging
 				return;
 			}
 
@@ -135,6 +134,7 @@ namespace file_system_database {
 				paramParent.Value = data.GetParentIndex();
 				command.ExecuteNonQueryAsync();
 			}
+			
 			
 		}
 
