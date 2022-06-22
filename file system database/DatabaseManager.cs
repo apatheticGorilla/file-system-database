@@ -133,6 +133,7 @@ namespace file_system_database {
 				paramParent.Value = data.GetParentIndex();
 				command.ExecuteNonQueryAsync();
 			}
+			command.Dispose();
 		}
 
 		void AddFoldersToDatabase(List<FolderData> folders) {
@@ -156,6 +157,7 @@ namespace file_system_database {
 				paramParent.Value = data.GetParentIndex();
 				command.ExecuteNonQuery();
 			}
+			command.Dispose();
 		}
 
 		Dictionary<string, int> FolderIDs(string[] folders) {
@@ -193,6 +195,7 @@ namespace file_system_database {
 			string query = "";
 			foreach (string item in items) {
 				string clean = item.Replace("\"", "\"\"");
+				query += ",\"" + clean + "\"";
 			}
 			return query[1..];
 		}
