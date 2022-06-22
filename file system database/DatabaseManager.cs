@@ -75,7 +75,7 @@ namespace file_system_database {
 				return;
 			}
 			catch (DirectoryNotFoundException) {
-				Console.WriteLine("Could not Find: {0}",path);
+				Console.WriteLine("Could not Find: {0}", path);
 				searchDepth--;
 				return;
 			}
@@ -105,7 +105,6 @@ namespace file_system_database {
 		}
 
 		void AddFilesToDatabase(List<FileData> files) {
-			
 			var command = connection.CreateCommand();
 			command.CommandText = "INSERT INTO files(basename, file_path, extension, size, parent) VALUES($basename, $path, $extension, $size, $parent) ";
 
@@ -134,12 +133,9 @@ namespace file_system_database {
 				paramParent.Value = data.GetParentIndex();
 				command.ExecuteNonQueryAsync();
 			}
-			
-			
 		}
 
 		void AddFoldersToDatabase(List<FolderData> folders) {
-			//var transaction = connection.BeginTransaction();
 			var command = connection.CreateCommand();
 			command.CommandText = "INSERT INTO folders(basename, folder_path, parent) VALUES($basename, $path, $parent) ";
 
@@ -157,13 +153,9 @@ namespace file_system_database {
 			foreach (FolderData data in folders) {
 				paramBasename.Value = data.GetName();
 				paramPath.Value = data.GetPath();
-
 				paramParent.Value = data.GetParentIndex();
-
-
 				command.ExecuteNonQuery();
 			}
-			//transaction.Commit();
 		}
 
 		Dictionary<string, int> FolderIDs(string[] folders) {
@@ -191,7 +183,7 @@ namespace file_system_database {
 			paramfolder.Value = folder;
 			command.Parameters.Add(paramfolder);
 			using (var reader = command.ExecuteReader()) {
-				while(reader.Read()) return reader.GetInt32(0);
+				while (reader.Read()) return reader.GetInt32(0);
 			}
 			return 0;
 		}
@@ -201,10 +193,6 @@ namespace file_system_database {
 			string query = "";
 			foreach (string item in items) {
 				string clean = item.Replace("\"", "\"\"");
-				query += ",\"" + clean + "\"";
-				//query.Concat(",\"");
-				//query.Concat(clean);
-				//query.Concat("\"");
 			}
 			return query[1..];
 		}
@@ -213,7 +201,7 @@ namespace file_system_database {
 			maxDepth = maxSearchDepth;
 			List<FolderData> folderData = new();
 			DirectoryInfo di = new(path);
-			int index = 0; 
+			int index = 0;
 
 			if (di.Parent != null) index = FolderIndex(di.Parent.ToString());
 			folderData.Add(new FolderData(path, index));
@@ -229,8 +217,4 @@ namespace file_system_database {
 			command.Dispose();
 		}
 	}
-
-	
-
-
 }

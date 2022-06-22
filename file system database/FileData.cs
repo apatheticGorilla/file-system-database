@@ -25,7 +25,8 @@
 			name = fi.Name;
 			try {
 				size = fi.Length;
-			}catch(FileNotFoundException) {
+			}
+			catch (FileNotFoundException) {
 				//TODO logging
 			}
 			extension = fi.Extension;
