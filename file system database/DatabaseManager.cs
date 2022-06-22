@@ -41,12 +41,19 @@ namespace file_system_database {
 		}
 
 		public void Update(string[] paths, int maxSearchDepth) {
+			var transaction = connection.BeginTransaction();
+			var command = connection.CreateCommand();
+			command.CommandText = @"DELETE FROM files;
+									DELETE FROM folders;";
+			command.ExecuteNonQuery();
+
 			maxDepth = maxSearchDepth;
 			List<FolderData> folderData = new();
 			foreach (string path in paths) {
 				folderData.Add(new FolderData(path, 0));
 			}
-			var transaction = connection.BeginTransaction();
+			
+			command.ExecuteNonQuery();
 			AddFoldersToDatabase(folderData);
 			Dictionary<string, int> ids = FolderIDs(paths);
 			foreach (string pth in paths) {
