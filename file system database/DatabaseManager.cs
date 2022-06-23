@@ -110,6 +110,7 @@ namespace file_system_database {
 				scan(pth, ids[pth]);
 			}
 			transaction.Commit();
+			vacuum();
 		}
 
 		private void scan(string path, int parentIndex) {
