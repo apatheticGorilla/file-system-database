@@ -181,6 +181,10 @@ namespace file_system_database {
 			transaction.Commit();
 		}
 
+		public void RemoveFolder(string path) {
+
+		}
+
 		void AddFilesToDatabase(List<FileData> files) {
 
 			foreach (FileData data in files) {
@@ -245,11 +249,27 @@ namespace file_system_database {
 		}
 
 		string FormatInQuery(List<int> items) {
-			string query = ""
+			string query = "";
 			foreach (int item in items) {
 				query += ",\"" + item.ToString() + "\"";
 			}
-			return query;
+			return query[1..];
+		}
+
+		List<int> GetSubfolders (List<int> folders) {
+			List<int> subfolders = new();
+			//var command = connection.CreateCommand();
+			string query = FormatInQuery(folders);
+			QueryCommand.CommandText = "SELECT folder_id FROM folders WHERE parent IN(" + query + ")";
+			using (var reader = QueryCommand.ExecuteReader()) {
+				while (reader.Read()) {
+					subfolders.Add(reader.GetInt32(0));
+				}
+			}
+			if (subfolders.Count > 0) {
+				subfolders.AddRange(GetSubfolders(subfolders));
+			}
+			return subfolders;
 		}
 
 		void vacuum() {
@@ -257,6 +277,12 @@ namespace file_system_database {
 			command.CommandText = "VACUUM";
 			command.ExecuteNonQuery();
 			command.Dispose();
+		}
+
+		public void TestFunction(List<int> E) {
+			connection.BeginTransaction();
+			PrepCommands();
+			Console.WriteLine(GetSubfolders(E));
 		}
 	}
 }
