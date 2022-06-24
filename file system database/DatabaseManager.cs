@@ -7,36 +7,38 @@ namespace file_system_database {
 		private SqliteCommand FileCommand;
 		private SqliteCommand DirCommand;
 		private SqliteCommand QueryCommand;
+
 		private SqliteParameter FparamBasename;
 		private SqliteParameter FparamPath;
 		private SqliteParameter FparamExtension;
 		private SqliteParameter FparamSize;
 		private SqliteParameter FparamParent;
-
 		private SqliteParameter DparamBasename;
 		private SqliteParameter DparamPath;
 		private SqliteParameter DparamParent;
+
 		private int maxDepth;
 		private int searchDepth = 0;
 
 		public DatabaseManager(string dbPath) {
 			connection = new("Data Source=" + dbPath);
 			connection.Open();
-
 		}
+
 		void PrepCommands() {
 			FileCommand = connection.CreateCommand();
 			FileCommand.CommandText = "INSERT INTO files(basename, file_path, extension, size, parent) VALUES($basename, $path, $extension, $size, $parent) ";
 
 			FparamBasename = FileCommand.CreateParameter();
-			FparamBasename.ParameterName = "basename";
 			FparamPath = FileCommand.CreateParameter();
-			FparamPath.ParameterName = "path";
 			FparamExtension = FileCommand.CreateParameter();
-			FparamExtension.ParameterName = "extension";
 			FparamSize = FileCommand.CreateParameter();
-			FparamSize.ParameterName = "size";
 			FparamParent = FileCommand.CreateParameter();
+
+			FparamBasename.ParameterName = "basename";
+			FparamPath.ParameterName = "path";
+			FparamExtension.ParameterName = "extension";
+			FparamSize.ParameterName = "size";
 			FparamParent.ParameterName = "parent";
 
 			FileCommand.Parameters.Add(FparamBasename);
@@ -49,10 +51,11 @@ namespace file_system_database {
 			DirCommand.CommandText = "INSERT INTO folders(basename, folder_path, parent) VALUES($basename, $path, $parent) ";
 
 			DparamBasename = DirCommand.CreateParameter();
-			DparamBasename.ParameterName = "basename";
 			DparamPath = DirCommand.CreateParameter();
-			DparamPath.ParameterName = "path";
 			DparamParent = DirCommand.CreateParameter();
+			
+			DparamBasename.ParameterName = "basename";
+			DparamPath.ParameterName = "path";
 			DparamParent.ParameterName = "parent";
 
 			DirCommand.Parameters.Add(DparamBasename);
@@ -61,6 +64,7 @@ namespace file_system_database {
 
 			QueryCommand = connection.CreateCommand();
 		}
+
 		public void Create() {
 			var transaction = connection.BeginTransaction();
 			var command = connection.CreateCommand();
@@ -137,6 +141,7 @@ namespace file_system_database {
 				searchDepth--;
 				return;
 			}
+
 			foreach (string directory in paths) {
 				folderData.Add(new FolderData(directory, parentIndex));
 			}
@@ -151,7 +156,6 @@ namespace file_system_database {
 
 			fileData.Clear();
 			fileData.TrimExcess();
-
 			folderData.Clear();
 			folderData.TrimExcess();
 
@@ -160,6 +164,21 @@ namespace file_system_database {
 				scan(pth, folderIds[pth]);
 			}
 			searchDepth--;
+		}
+
+		public void AddFolder(string path, int maxSearchDepth) {
+			maxDepth = maxSearchDepth;
+			List<FolderData> folderData = new();
+			DirectoryInfo di = new(path);
+			int index = 0;
+
+			if (di.Parent != null) index = FolderIndex(di.Parent.ToString());
+			folderData.Add(new FolderData(path, index));
+			var transaction = connection.BeginTransaction();
+			PrepCommands();
+			AddFoldersToDatabase(folderData);
+			scan(path, FolderIndex(path));
+			transaction.Commit();
 		}
 
 		void AddFilesToDatabase(List<FileData> files) {
@@ -225,20 +244,6 @@ namespace file_system_database {
 			return query[1..];
 		}
 
-		public void AddFolder(string path, int maxSearchDepth) {
-			maxDepth = maxSearchDepth;
-			List<FolderData> folderData = new();
-			DirectoryInfo di = new(path);
-			int index = 0;
-
-			if (di.Parent != null) index = FolderIndex(di.Parent.ToString());
-			folderData.Add(new FolderData(path, index));
-			var transaction = connection.BeginTransaction();
-			PrepCommands();
-			AddFoldersToDatabase(folderData);
-			scan(path, FolderIndex(path));
-			transaction.Commit();
-		}
 		void vacuum() {
 			var command = connection.CreateCommand();
 			command.CommandText = "VACUUM";
