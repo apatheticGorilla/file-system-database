@@ -244,6 +244,14 @@ namespace file_system_database {
 			return query[1..];
 		}
 
+		string FormatInQuery(List<int> items) {
+			string query = ""
+			foreach (int item in items) {
+				query += ",\"" + item.ToString() + "\"";
+			}
+			return query;
+		}
+
 		void vacuum() {
 			var command = connection.CreateCommand();
 			command.CommandText = "VACUUM";
