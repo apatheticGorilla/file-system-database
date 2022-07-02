@@ -1,14 +1,17 @@
-﻿namespace file_system_database {
+﻿namespace file_system_database
+{
 
 
-	internal class FileData {
+	internal class FileData
+	{
 		string name;
 		readonly string path;
 		string extension;
 		long size;
-		int parentIndex;
+		readonly int parentIndex;
 
-		public FileData(string path, int parentIndex) {
+		public FileData(string path, int parentIndex)
+		{
 			this.path = path;
 			this.parentIndex = parentIndex;
 		}
@@ -19,14 +22,17 @@
 		public long GetSize() { return size; }
 		public int GetParentIndex() { return parentIndex; }
 
-		public void findInfo() {
+		public void FindInfo()
+		{
 			size = 0;
-			FileInfo fi = new FileInfo(path);
+			FileInfo fi = new(path);
 			name = fi.Name;
-			try {
+			try
+			{
 				size = fi.Length;
 			}
-			catch (FileNotFoundException) {
+			catch (FileNotFoundException)
+			{
 				//TODO logging
 			}
 			extension = fi.Extension;

@@ -1,13 +1,16 @@
-﻿namespace file_system_database {
-	internal class FolderData {
-		string name;
+﻿namespace file_system_database
+{
+	internal class FolderData
+	{
+		readonly string name;
 		readonly string path;
-		int parentIndex;
+		readonly int parentIndex;
 
-		public FolderData(string path, int parentIndex) {
+		public FolderData(string path, int parentIndex)
+		{
 			this.path = path;
 			this.parentIndex = parentIndex;
-			DirectoryInfo dirInfo = new DirectoryInfo(path);
+			DirectoryInfo dirInfo = new(path);
 			name = dirInfo.Name;
 		}
 		public string GetName() { return name; }

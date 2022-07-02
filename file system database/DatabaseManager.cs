@@ -1,9 +1,11 @@
 ﻿using Microsoft.Data.Sqlite;
 using System.Text;
 
-namespace file_system_database {
+namespace file_system_database
+{
 
-	public class DatabaseManager {
+	public class DatabaseManager
+	{
 		private readonly SqliteConnection connection;
 		private SqliteCommand FileCommand;
 		private SqliteCommand DirCommand;
@@ -21,12 +23,14 @@ namespace file_system_database {
 		private int maxDepth;
 		private int searchDepth = 0;
 
-		public DatabaseManager(string dbPath) {
+		public DatabaseManager(string dbPath)
+		{
 			connection = new("Data Source=" + dbPath);
 			connection.Open();
 		}
 
-		void PrepCommands() {
+		void PrepCommands()
+		{
 			FileCommand = connection.CreateCommand();
 			FileCommand.CommandText = "INSERT INTO files(basename, file_path, extension, size, parent) VALUES($basename, $path, $extension, $size, $parent) ";
 
@@ -66,7 +70,8 @@ namespace file_system_database {
 			QueryCommand = connection.CreateCommand();
 		}
 
-		public void Create() {
+		public void Create()
+		{
 			var transaction = connection.BeginTransaction();
 			var command = connection.CreateCommand();
 			command.CommandText = @"
@@ -94,7 +99,8 @@ namespace file_system_database {
 			transaction.Commit();
 		}
 
-		public void Update(string[] paths, int maxSearchDepth) {
+		public void Update(string[] paths, int maxSearchDepth)
+		{
 			var transaction = connection.BeginTransaction();
 			PrepCommands();
 			var command = connection.CreateCommand();
@@ -104,23 +110,27 @@ namespace file_system_database {
 
 			maxDepth = maxSearchDepth;
 			List<FolderData> folderData = new();
-			foreach (string path in paths) {
+			foreach (string path in paths)
+			{
 				folderData.Add(new FolderData(path, 0));
 			}
 
 			command.ExecuteNonQuery();
 			AddFoldersToDatabase(folderData);
 			Dictionary<string, int> ids = FolderIDs(paths);
-			foreach (string pth in paths) {
-				scan(pth, ids[pth]);
+			foreach (string pth in paths)
+			{
+				Scan(pth, ids[pth]);
 			}
 			transaction.Commit();
-			vacuum();
+			Vacuum();
 		}
 
-		private void scan(string path, int parentIndex) {
+		private void Scan(string path, int parentIndex)
+		{
 			searchDepth++;
-			if (maxDepth > 0 && searchDepth >= maxDepth) {
+			if (maxDepth > 0 && searchDepth >= maxDepth)
+			{
 				searchDepth--;
 				return;
 			}
@@ -129,27 +139,32 @@ namespace file_system_database {
 			List<FolderData> folderData = new();
 
 			string[] paths;
-			try {
+			try
+			{
 				paths = Directory.GetDirectories(path);
 			}
-			catch (UnauthorizedAccessException) {
+			catch (UnauthorizedAccessException)
+			{
 				Console.WriteLine("Access Denied: {0}", path);
 				searchDepth--;
 				return;
 			}
-			catch (DirectoryNotFoundException) {
+			catch (DirectoryNotFoundException)
+			{
 				Console.WriteLine("Could not Find: {0}", path);
 				searchDepth--;
 				return;
 			}
 
-			foreach (string directory in paths) {
+			foreach (string directory in paths)
+			{
 				folderData.Add(new FolderData(directory, parentIndex));
 			}
 
-			foreach (string file in Directory.GetFiles(path)) {
+			foreach (string file in Directory.GetFiles(path))
+			{
 				FileData d = new(file, parentIndex);
-				d.findInfo();
+				d.FindInfo();
 				fileData.Add(d);
 			}
 			AddFilesToDatabase(fileData);
@@ -161,13 +176,15 @@ namespace file_system_database {
 			folderData.TrimExcess();
 
 			Dictionary<string, int> folderIds = FolderIDs(paths);
-			foreach (string pth in paths) {
-				scan(pth, folderIds[pth]);
+			foreach (string pth in paths)
+			{
+				Scan(pth, folderIds[pth]);
 			}
 			searchDepth--;
 		}
 
-		public void AddFolder(string path, int maxSearchDepth) {
+		public void AddFolder(string path, int maxSearchDepth)
+		{
 			maxDepth = maxSearchDepth;
 			List<FolderData> folderData = new();
 			DirectoryInfo di = new(path);
@@ -178,14 +195,14 @@ namespace file_system_database {
 			var transaction = connection.BeginTransaction();
 			PrepCommands();
 			AddFoldersToDatabase(folderData);
-			scan(path, FolderIndex(path));
+			Scan(path, FolderIndex(path));
 			transaction.Commit();
 		}
 
-		public void RemoveFolder(string path) {
+		public void RemoveFolder(string path)
+		{
 			var transaction = connection.BeginTransaction();
 			PrepCommands();
-			//int index = FolderIndex(path);
 			List<int> indexes = new();
 			indexes.Add(FolderIndex(path));
 			indexes.AddRange(GetSubfolders(indexes));
@@ -200,13 +217,15 @@ namespace file_system_database {
 			command.Parameters.Add(paramIndexes);
 			paramIndexes.Value = query;
 			command.ExecuteNonQuery();
-			vacuum();
+			Vacuum();
 			transaction.Commit();
 		}
 
-		void AddFilesToDatabase(List<FileData> files) {
+		void AddFilesToDatabase(List<FileData> files)
+		{
 
-			foreach (FileData data in files) {
+			foreach (FileData data in files)
+			{
 				FparamBasename.Value = data.GetName();
 				FparamPath.Value = data.GetPath();
 				FparamExtension.Value = data.GetExtension();
@@ -216,9 +235,11 @@ namespace file_system_database {
 			}
 		}
 
-		void AddFoldersToDatabase(List<FolderData> folders) {
+		void AddFoldersToDatabase(List<FolderData> folders)
+		{
 
-			foreach (FolderData data in folders) {
+			foreach (FolderData data in folders)
+			{
 				DparamBasename.Value = data.GetName();
 				DparamPath.Value = data.GetPath();
 				DparamParent.Value = data.GetParentIndex();
@@ -227,92 +248,98 @@ namespace file_system_database {
 
 		}
 
-		Dictionary<string, int> FolderIDs(string[] folders) {
+		Dictionary<string, int> FolderIDs(string[] folders)
+		{
 			Dictionary<string, int> ids = new();
 			if (folders.Length == 0) return ids;
-			//var command = connection.CreateCommand();
 			string query = FormatInQuery(folders);
-			//Console.WriteLine(query);
 			QueryCommand.CommandText = "SELECT Folder_path, folder_id FROM folders WHERE folder_path IN(" + query + ")";
 
-			using (var reader = QueryCommand.ExecuteReader()) {
+			using (var reader = QueryCommand.ExecuteReader())
+			{
 
-				while (reader.Read()) {
+				while (reader.Read())
+				{
 					ids.Add(reader.GetString(0), reader.GetInt32(1));
 				}
 			}
 			return ids;
 		}
 
-		int FolderIndex(string folder) {
+		int FolderIndex(string folder)
+		{
 			var command = connection.CreateCommand();
 			command.CommandText = "SELECT folder_id FROM folders WHERE folder_path = $path";
 			var paramfolder = command.CreateParameter();
 			paramfolder.ParameterName = "path";
 			paramfolder.Value = folder;
 			command.Parameters.Add(paramfolder);
-			using (var reader = command.ExecuteReader()) {
+			using (var reader = command.ExecuteReader())
+			{
 				while (reader.Read()) return reader.GetInt32(0);
 			}
 			return 0;
 		}
 
-		string FormatInQuery(string[] items) {
-			//TODO replace with StringBuilder
-			string query = "";
+		static string FormatInQuery(string[] items)
+		{
 			StringBuilder sb = new("");
-			foreach (string item in items) {
+			foreach (string item in items)
+			{
 				string clean = item.Replace("\"", "\"\"");
 				sb.Append(",\"");
 				sb.Append(clean);
-				sb.Append("\"");
-				
-				//query += ",\"" + clean + "\"";
+				sb.Append('\"');
 			}
-			query = sb.ToString();
+			string query = sb.ToString();
 			return query[1..];
 		}
 
-		string FormatInQuery(List<int> items) {
-			string query = "";
+		static string FormatInQuery(List<int> items)
+		{
 			StringBuilder sb = new("");
-			foreach (int item in items) {
+			foreach (int item in items)
+			{
 				sb.Append(",\"");
 				sb.Append(item);
-				sb.Append("\"");
-				//query += ",\"" + item.ToString() + "\"";
+				sb.Append('\"');
 			}
-			query = sb.ToString();
+			string query = sb.ToString();
 			return query[1..];
 		}
 
-		List<int> GetSubfolders(List<int> folders) {
+		List<int> GetSubfolders(List<int> folders)
+		{
 			List<int> subfolders = new();
-			//var command = connection.CreateCommand();
 			string query = FormatInQuery(folders);
 			QueryCommand.CommandText = "SELECT folder_id FROM folders WHERE parent IN(" + query + ")";
-			using (var reader = QueryCommand.ExecuteReader()) {
-				while (reader.Read()) {
+			using (var reader = QueryCommand.ExecuteReader())
+			{
+				while (reader.Read())
+				{
 					subfolders.Add(reader.GetInt32(0));
 				}
 			}
-			if (subfolders.Count > 0) {
+			if (subfolders.Count > 0)
+			{
 				subfolders.AddRange(GetSubfolders(subfolders));
 			}
 			return subfolders;
 		}
 
-		void vacuum() {
+		void Vacuum()
+		{
 			var command = connection.CreateCommand();
 			command.CommandText = "VACUUM";
 			command.ExecuteNonQuery();
 			command.Dispose();
 		}
 
-		public void TestFunction(String s) {
+		public void TestFunction(String s)
+		{
 			connection.BeginTransaction();
 			PrepCommands();
-			List<int> items = new List<int>();
+			List<int> items = new();
 			items.Add(FolderIndex(s));
 			Console.WriteLine(GetSubfolders(items));
 		}
