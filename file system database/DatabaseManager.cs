@@ -53,7 +53,7 @@ namespace file_system_database {
 			DparamBasename = DirCommand.CreateParameter();
 			DparamPath = DirCommand.CreateParameter();
 			DparamParent = DirCommand.CreateParameter();
-			
+
 			DparamBasename.ParameterName = "basename";
 			DparamPath.ParameterName = "path";
 			DparamParent.ParameterName = "parent";
@@ -182,7 +182,25 @@ namespace file_system_database {
 		}
 
 		public void RemoveFolder(string path) {
-
+			var transaction = connection.BeginTransaction();
+			PrepCommands();
+			//int index = FolderIndex(path);
+			List<int> indexes = new();
+			indexes.Add(FolderIndex(path));
+			indexes.AddRange(GetSubfolders(indexes));
+			string query = FormatInQuery(indexes);
+			var command = connection.CreateCommand();
+			command.CommandText = @"
+				DELETE FROM folders WHERE folder_id IN($indexes);
+				DELETE FROM files WHERE parent IN($indexes);
+				";
+			var paramIndexes = command.CreateParameter();
+			paramIndexes.ParameterName = "indexes";
+			command.Parameters.Add(paramIndexes);
+			paramIndexes.Value = query;
+			command.ExecuteNonQuery();
+			vacuum();
+			transaction.Commit();
 		}
 
 		void AddFilesToDatabase(List<FileData> files) {
@@ -256,7 +274,7 @@ namespace file_system_database {
 			return query[1..];
 		}
 
-		List<int> GetSubfolders (List<int> folders) {
+		List<int> GetSubfolders(List<int> folders) {
 			List<int> subfolders = new();
 			//var command = connection.CreateCommand();
 			string query = FormatInQuery(folders);
