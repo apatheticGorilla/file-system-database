@@ -1,4 +1,5 @@
 ﻿using Microsoft.Data.Sqlite;
+using System.Text;
 
 namespace file_system_database {
 
@@ -259,18 +260,29 @@ namespace file_system_database {
 		string FormatInQuery(string[] items) {
 			//TODO replace with StringBuilder
 			string query = "";
+			StringBuilder sb = new("");
 			foreach (string item in items) {
 				string clean = item.Replace("\"", "\"\"");
-				query += ",\"" + clean + "\"";
+				sb.Append(",\"");
+				sb.Append(clean);
+				sb.Append("\"");
+				
+				//query += ",\"" + clean + "\"";
 			}
+			query = sb.ToString();
 			return query[1..];
 		}
 
 		string FormatInQuery(List<int> items) {
 			string query = "";
+			StringBuilder sb = new("");
 			foreach (int item in items) {
-				query += ",\"" + item.ToString() + "\"";
+				sb.Append(",\"");
+				sb.Append(item);
+				sb.Append("\"");
+				//query += ",\"" + item.ToString() + "\"";
 			}
+			query = sb.ToString();
 			return query[1..];
 		}
 
@@ -297,10 +309,12 @@ namespace file_system_database {
 			command.Dispose();
 		}
 
-		public void TestFunction(List<int> E) {
+		public void TestFunction(String s) {
 			connection.BeginTransaction();
 			PrepCommands();
-			Console.WriteLine(GetSubfolders(E));
+			List<int> items = new List<int>();
+			items.Add(FolderIndex(s));
+			Console.WriteLine(GetSubfolders(items));
 		}
 	}
 }
