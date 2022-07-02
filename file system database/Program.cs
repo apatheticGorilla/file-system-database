@@ -2,8 +2,7 @@
 {
 	class Program
 	{
-		static void Main(string[] args)
-		{
+		static void Main(string[] args) {
 			DatabaseManager db = new("E:\\test.db");
 			//db.Create();
 			string[] drives = { "C:\\", "D:\\", "F:\\", "G:\\", "E:\\" };

@@ -6,8 +6,7 @@
 		readonly string path;
 		readonly int parentIndex;
 
-		public FolderData(string path, int parentIndex)
-		{
+		public FolderData(string path, int parentIndex) {
 			this.path = path;
 			this.parentIndex = parentIndex;
 			DirectoryInfo dirInfo = new(path);
