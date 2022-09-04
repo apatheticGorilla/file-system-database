@@ -1,6 +1,4 @@
 ﻿using Microsoft.Data.Sqlite;
-using System.Diagnostics.Metrics;
-using System.Runtime.Intrinsics.X86;
 using System.Text;
 
 namespace file_system_database {
@@ -183,7 +181,7 @@ namespace file_system_database {
 			//insert into database in bulk.
 			AddFilesToDatabase(fileData);
 			AddFoldersToDatabase(folderData);
-			
+
 			fileData.Clear();
 			fileData.TrimExcess();
 			folderData.Clear();

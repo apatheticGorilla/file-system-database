@@ -1,7 +1,5 @@
-﻿namespace file_system_database
-{
-	public readonly struct FolderData
-	{
+﻿namespace file_system_database {
+	public readonly struct FolderData {
 		readonly string name;
 		readonly string path;
 		readonly int parentIndex;
