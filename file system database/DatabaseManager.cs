@@ -1,4 +1,6 @@
 ﻿using Microsoft.Data.Sqlite;
+using System.Diagnostics.Metrics;
+using System.Runtime.Intrinsics.X86;
 using System.Text;
 
 namespace file_system_database {
@@ -21,13 +23,21 @@ namespace file_system_database {
 		private int maxDepth;
 		private int searchDepth = 0;
 
+		/// <summary>
+		/// Used to create, update, and query the file system database
+		/// </summary>
+		/// <param name="dbPath">the filepath of the database file</param>
 		public DatabaseManager(string dbPath) {
 			connection = new("Data Source=" + dbPath);
 			connection.Open();
-
 		}
 
+		/// <summary>
+		/// Prepares parameters and commands for use.
+		/// This must be called after creating a transaction that will use these commands.
+		/// </summary>
 		void PrepCommands() {
+			//Command for adding files to DB
 			FileCommand = connection.CreateCommand();
 			FileCommand.CommandText = "INSERT INTO files(basename, file_path, extension, size, parent) VALUES($basename, $path, $extension, $size, $parent) ";
 
@@ -49,6 +59,7 @@ namespace file_system_database {
 			FileCommand.Parameters.Add(FparamSize);
 			FileCommand.Parameters.Add(FparamParent);
 
+			//Command for adding folders to DB
 			DirCommand = connection.CreateCommand();
 			DirCommand.CommandText = "INSERT INTO folders(basename, folder_path, parent) VALUES($basename, $path, $parent) ";
 
@@ -64,9 +75,12 @@ namespace file_system_database {
 			DirCommand.Parameters.Add(DparamPath);
 			DirCommand.Parameters.Add(DparamParent);
 
+			//basic command for queries
 			QueryCommand = connection.CreateCommand();
 		}
-
+		/// <summary>
+		///		Creates the database
+		/// </summary>
 		public void Create() {
 			var transaction = connection.BeginTransaction();
 			var command = connection.CreateCommand();
@@ -95,6 +109,11 @@ namespace file_system_database {
 			transaction.Commit();
 		}
 
+		/// <summary>
+		///  Deletes old data and re-scans folders
+		/// </summary>
+		/// <param name="paths">Addresses of folders to scan</param>
+		/// <param name="maxSearchDepth">Folders and files deeper than this number will not be searched. Set to 0 to disable.</param>
 		public void Update(string[] paths, int maxSearchDepth) {
 			var transaction = connection.BeginTransaction();
 			PrepCommands();
@@ -119,8 +138,14 @@ namespace file_system_database {
 			Vacuum();
 		}
 
+		/// <summary>
+		/// The heart of database population, making use of recursion to scan filesystems
+		/// </summary>
+		/// <param name="path">Filepath of the folder to scan</param>
+		/// <param name="parentIndex">Folder_id of the parent folder, passed to the method to cut down on queries</param>
 		private void Scan(string path, int parentIndex) {
 			searchDepth++;
+			//end execution if max search depth is reached.
 			if (maxDepth > 0 && searchDepth >= maxDepth) {
 				searchDepth--;
 				return;
@@ -129,6 +154,7 @@ namespace file_system_database {
 			List<FileData> fileData = new();
 			List<FolderData> folderData = new();
 
+			//attempt to get directories or end execution if failed
 			string[] paths;
 			try {
 				paths = Directory.GetDirectories(path);
@@ -144,22 +170,26 @@ namespace file_system_database {
 				return;
 			}
 
+			//save data for each folder to a struct and add to the list.
 			foreach (string directory in paths) {
 				folderData.Add(new FolderData(directory, parentIndex));
 			}
 
+			//get files and save their info to a list of structs.
 			foreach (string file in Directory.GetFiles(path)) {
 				FileData d = new(file, parentIndex);
 				fileData.Add(d);
 			}
+			//insert into database in bulk.
 			AddFilesToDatabase(fileData);
 			AddFoldersToDatabase(folderData);
-
+			
 			fileData.Clear();
 			fileData.TrimExcess();
 			folderData.Clear();
 			folderData.TrimExcess();
 
+			//query the IDs of the folders in one query to pass to Scan()
 			Dictionary<string, int> folderIds = FolderIDs(paths);
 			foreach (string pth in paths) {
 				Scan(pth, folderIds[pth]);
@@ -167,6 +197,11 @@ namespace file_system_database {
 			searchDepth--;
 		}
 
+		/// <summary>
+		/// Adds a folder to the database without deleting existing data.
+		/// </summary>
+		/// <param name="path">Address of the folder to be added.</param>
+		/// <param name="maxSearchDepth">Folders and files deeper than this number will not be searched. Set to 0 to disable.</param>
 		public void AddFolder(string path, int maxSearchDepth) {
 			maxDepth = maxSearchDepth;
 			List<FolderData> folderData = new();
@@ -182,6 +217,10 @@ namespace file_system_database {
 			transaction.Commit();
 		}
 
+		/// <summary>
+		/// Removes a folder and all children from the database.
+		/// </summary>
+		/// <param name="path">Address of the folder to delete</param>
 		public void RemoveFolder(string path) {
 			var transaction = connection.BeginTransaction();
 			PrepCommands();
@@ -203,6 +242,10 @@ namespace file_system_database {
 			transaction.Commit();
 		}
 
+		/// <summary>
+		/// insert file data in bulk
+		/// </summary>
+		/// <param name="files">FileData for each row</param>
 		void AddFilesToDatabase(List<FileData> files) {
 
 			foreach (FileData data in files) {
@@ -215,6 +258,10 @@ namespace file_system_database {
 			}
 		}
 
+		/// <summary>
+		/// Insert folder data in bulk
+		/// </summary>
+		/// <param name="folders">FolderData for each row</param>
 		void AddFoldersToDatabase(List<FolderData> folders) {
 
 			foreach (FolderData data in folders) {
@@ -226,6 +273,11 @@ namespace file_system_database {
 
 		}
 
+		/// <summary>
+		/// Queries the database for the IDs of the given folders.
+		/// </summary>
+		/// <param name="folders">Filepaths of the folders</param>
+		/// <returns>Dictionary of Ids using the filepath as the key</returns>
 		Dictionary<string, int> FolderIDs(string[] folders) {
 			Dictionary<string, int> ids = new();
 			if (folders.Length == 0) return ids;
@@ -241,6 +293,11 @@ namespace file_system_database {
 			return ids;
 		}
 
+		/// <summary>
+		/// Queiries the database for the index of the given folder.
+		/// </summary>
+		/// <param name="folder">Filepath of the folder</param>
+		/// <returns>Folder_ID from the cooresponding database row</returns>
 		int FolderIndex(string folder) {
 			var command = connection.CreateCommand();
 			command.CommandText = "SELECT folder_id FROM folders WHERE folder_path = $path";
@@ -254,6 +311,11 @@ namespace file_system_database {
 			return 0;
 		}
 
+		/// <summary>
+		/// turns list of items into a single string for queries using WHERE ___ IN
+		/// </summary>
+		/// <param name="items"></param>
+		/// <returns></returns>
 		static string FormatInQuery(string[] items) {
 			StringBuilder sb = new("");
 			foreach (string item in items) {
@@ -266,6 +328,11 @@ namespace file_system_database {
 			return query[1..];
 		}
 
+		/// <summary>
+		/// turns list of items into a single string for queries using WHERE ___ IN
+		/// </summary>
+		/// <param name="items"></param>
+		/// <returns></returns>
 		static string FormatInQuery(List<int> items) {
 			StringBuilder sb = new("");
 			foreach (int item in items) {
@@ -277,6 +344,11 @@ namespace file_system_database {
 			return query[1..];
 		}
 
+		/// <summary>
+		/// Recursivley queries database for the children of the given folder and the children of all subfolders
+		/// </summary>
+		/// <param name="folders">Indexes of the folders to query</param>
+		/// <returns>Indexes of all folders</returns>
 		List<int> GetSubfolders(List<int> folders) {
 			List<int> subfolders = new();
 			string query = FormatInQuery(folders);
@@ -292,6 +364,9 @@ namespace file_system_database {
 			return subfolders;
 		}
 
+		/// <summary>
+		/// creates and runs a vacuum command
+		/// </summary>
 		void Vacuum() {
 			var command = connection.CreateCommand();
 			command.CommandText = "VACUUM";
@@ -299,13 +374,13 @@ namespace file_system_database {
 			command.Dispose();
 		}
 
-		public void TestFunction(String s) {
-			connection.BeginTransaction();
-			PrepCommands();
-			List<int> items = new();
-			items.Add(FolderIndex(s));
-			Console.WriteLine(GetSubfolders(items));
-		}
+		//public void TestFunction(String s) {
+		//	connection.BeginTransaction();
+		//	PrepCommands();
+		//	List<int> items = new();
+		//	items.Add(FolderIndex(s));
+		//	Console.WriteLine(GetSubfolders(items));
+		//}
 
 		//TODO make this less ugly
 		public List<(int FileID, String Basename, String filePath, String extension, int size, int parent)> FilesWithExtension(String extension) {
