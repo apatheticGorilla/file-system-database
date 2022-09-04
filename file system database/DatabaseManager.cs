@@ -151,7 +151,6 @@ namespace file_system_database
 
 			foreach (string file in Directory.GetFiles(path)) {
 				FileData d = new(file, parentIndex);
-				d.FindInfo();
 				fileData.Add(d);
 			}
 			AddFilesToDatabase(fileData);

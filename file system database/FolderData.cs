@@ -1,6 +1,6 @@
 ﻿namespace file_system_database
 {
-	internal class FolderData
+	public readonly struct FolderData
 	{
 		readonly string name;
 		readonly string path;
