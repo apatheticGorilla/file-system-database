@@ -25,10 +25,12 @@ namespace file_system_database {
 		/// Used to create, update, and query the file system database
 		/// </summary>
 		/// <param name="dbPath">the filepath of the database file</param>
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
 		public DatabaseManager(string dbPath) {
 			connection = new("Data Source=" + dbPath);
 			connection.Open();
 		}
+#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
 
 		/// <summary>
 		/// Prepares parameters and commands for use.
@@ -222,8 +224,9 @@ namespace file_system_database {
 		public void RemoveFolder(string path) {
 			var transaction = connection.BeginTransaction();
 			PrepCommands();
-			List<int> indexes = new();
-			indexes.Add(FolderIndex(path));
+			List<int> indexes = new() {
+				FolderIndex(path)
+			};
 			indexes.AddRange(GetSubfolders(indexes));
 			string query = FormatInQuery(indexes);
 			var command = connection.CreateCommand();
