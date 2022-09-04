@@ -1,11 +1,9 @@
 ﻿using Microsoft.Data.Sqlite;
 using System.Text;
 
-namespace file_system_database
-{
+namespace file_system_database {
 
-	public class DatabaseManager
-	{
+	public class DatabaseManager {
 		private readonly SqliteConnection connection;
 		private SqliteCommand FileCommand;
 		private SqliteCommand DirCommand;
@@ -26,6 +24,7 @@ namespace file_system_database
 		public DatabaseManager(string dbPath) {
 			connection = new("Data Source=" + dbPath);
 			connection.Open();
+
 		}
 
 		void PrepCommands() {
@@ -306,6 +305,19 @@ namespace file_system_database
 			List<int> items = new();
 			items.Add(FolderIndex(s));
 			Console.WriteLine(GetSubfolders(items));
+		}
+
+		//TODO make this less ugly
+		public List<(int FileID, String Basename, String filePath, String extension, int size, int parent)> FilesWithExtension(String extension) {
+			List<(int FileID, String Basename, String filePath, String extension, int size, int parent)> values = new();
+			PrepCommands();
+			QueryCommand.CommandText = "SELECT * FROM files WHERE extension=\"" + extension + "\"";
+			using (var reader = QueryCommand.ExecuteReader()) {
+				while (reader.Read()) {
+					values.Add((reader.GetInt32(0), reader.GetString(1), reader.GetString(2), reader.GetString(3), reader.GetInt32(4), reader.GetInt32(4)));
+				}
+			}
+			return values;
 		}
 	}
 }
