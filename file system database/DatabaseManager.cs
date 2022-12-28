@@ -30,7 +30,7 @@ namespace file_system_database {
 			bool DbExists = File.Exists(dbPath);
 			connection = new("Data Source=" + dbPath);
 			connection.Open();
-			//automatically creat tables if the file did not exist before opening the connection
+			//automatically create tables if the file did not exist before opening the connection
 			if (!DbExists) Create();
 		}
 #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
@@ -142,7 +142,7 @@ namespace file_system_database {
 		}
 
 		/// <summary>
-		/// The heart of database population, making use of recursion to scan filesystems
+		/// The heart of database population, making use of recursion to scan file systems
 		/// </summary>
 		/// <param name="path">Filepath of the folder to scan</param>
 		/// <param name="parentIndex">Folder_id of the parent folder, passed to the method to cut down on queries</param>
@@ -298,7 +298,7 @@ namespace file_system_database {
 		}
 
 		/// <summary>
-		/// Queiries the database for the index of the given folder.
+		/// Queries the database for the index of the given folder.
 		/// </summary>
 		/// <param name="folder">Filepath of the folder</param>
 		/// <returns>Folder_ID from the cooresponding database row</returns>
@@ -349,7 +349,7 @@ namespace file_system_database {
 		}
 
 		/// <summary>
-		/// Recursivley queries database for the children of the given folder and the children of all subfolders
+		/// Recursively queries database for the children of the given folder and the children of all subfolders
 		/// </summary>
 		/// <param name="folders">Indexes of the folders to query</param>
 		/// <returns>Indexes of all folders</returns>
