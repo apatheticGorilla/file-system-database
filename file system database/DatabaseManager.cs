@@ -142,6 +142,25 @@ namespace file_system_database {
 		}
 
 		/// <summary>
+		/// Gets the basename, extension and size of a file and puts them into a FileData object
+		/// </summary>
+		/// <param name="path">The full path to the file</param>
+		/// <param name="parentIndex">The index of the parent folder in the database</param>
+		/// <returns>a FileData struct with the gathered information</returns>
+		FileData ScanFile(string path, int parentIndex) {
+			long size = 0;
+			FileInfo fi = new(path);
+			string name = fi.Name;
+			try {
+				size = fi.Length;
+			}
+			catch (FileNotFoundException) {
+				//TODO logging
+			}
+			string extension = fi.Extension;
+			return new FileData(name, path, parentIndex, extension, size);
+		}
+		/// <summary>
 		/// The heart of database population, making use of recursion to scan file systems
 		/// </summary>
 		/// <param name="path">Filepath of the folder to scan</param>
@@ -180,8 +199,8 @@ namespace file_system_database {
 
 			//get files and save their info to a list of structs.
 			foreach (string file in Directory.GetFiles(path)) {
-				FileData d = new(file, parentIndex);
-				fileData.Add(d);
+				//FileData d = new(file, parentIndex);
+				fileData.Add(ScanFile(file, parentIndex));
 			}
 			//insert into database in bulk.
 			AddFilesToDatabase(fileData);

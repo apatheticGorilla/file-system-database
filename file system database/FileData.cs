@@ -8,19 +8,12 @@
 		readonly long size;
 		readonly int parentIndex;
 
-		public FileData(string path, int parentIndex) {
+		public FileData(string name, string path, int parentIndex, string extension, long size) {
+			this.name = name;
 			this.path = path;
 			this.parentIndex = parentIndex;
-			size = 0;
-			FileInfo fi = new(path);
-			name = fi.Name;
-			try {
-				size = fi.Length;
-			}
-			catch (FileNotFoundException) {
-				//TODO logging
-			}
-			extension = fi.Extension;
+			this.extension = extension;
+			this.size = size;
 		}
 
 		public string GetName() { return name; }
