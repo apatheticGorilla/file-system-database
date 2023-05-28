@@ -158,7 +158,7 @@ namespace file_system_database {
 				//TODO logging
 			}
 			string extension = fi.Extension;
-			return new FileData(name, path, parentIndex, extension, size);
+			return new FileData(name, path, extension, size, parentIndex);
 		}
 		/// <summary>
 		/// The heart of database population, making use of recursion to scan file systems
