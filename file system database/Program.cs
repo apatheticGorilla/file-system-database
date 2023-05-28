@@ -2,9 +2,13 @@
 	class Program {
 		static void Main(string[] args) {
 			DatabaseManager db = new("E:\\test.db");
-			//db.Create();
-			string[] drives = { "C:\\", "D:\\", "F:\\", "G:\\", "E:\\" };
-			//db.Update(drives, 0);
+			//db.Create()
+			DriveInfo[] driveInfos = DriveInfo.GetDrives();
+			string[] drives = new string[driveInfos.Length];
+			for(int i = 0; i < driveInfos.Length; i++) {
+				drives[i] = driveInfos[i].Name;
+			}
+			db.Update(drives, 0);
 			//db.RemoveFolder("C:\\Program Files");
 			//db.AddFolder("Z:\\",0);
 			//db.TestFunction("C:\\");
