@@ -437,11 +437,17 @@ namespace file_system_database {
 		/// </summary>
 		/// <param name="referenceFolder">The folder to mimic the structure of.</param>
 		/// <param name="outputFolder">The file path that the structure is written to.</param>
+
+
 		public void RecreateFolderStructure(string referenceFolder, string outputFolder) {
+			PrepCommands();
+			recreateFolderStructure(referenceFolder, outputFolder);
+		}
+		void recreateFolderStructure(string referenceFolder, string outputFolder) {
 			//get folder basename
 			string basename = "";
 			//TODO replace with a command for this method only.
-			PrepCommands();
+			//PrepCommands();
 			QueryCommand.CommandText = "SELECT basename FROM folders WHERE folder_path=\"" + referenceFolder + "\"";
 			using (var reader = QueryCommand.ExecuteReader()) {
 				while (reader.Read()) basename = reader.GetString(0);
@@ -449,11 +455,7 @@ namespace file_system_database {
 			Debug.Assert(basename.Length > 0);
 
 			//create the directory
-			string dir;
-			if (outputFolder.LastIndexOf('\\') == (basename.Length - 1))
-				dir = outputFolder + basename;
-			else
-				dir = outputFolder + "\\" + basename;
+			string dir = outputFolder + "\\" + basename;
 			if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
 			else Debug.WriteLine("The folder " + dir + " already exists");
 
@@ -466,7 +468,7 @@ namespace file_system_database {
 			}
 			//Recursivley create structure for each child
 			foreach (var child in children) {
-				RecreateFolderStructure(child, dir);
+				recreateFolderStructure(child, dir);
 			}
 		}
 	}
