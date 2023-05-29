@@ -405,14 +405,25 @@ namespace file_system_database {
 		//	Console.WriteLine(GetSubfolders(items));
 		//}
 
-		//TODO make this less ugly
-		public List<(int FileID, String Basename, String filePath, String extension, int size, int parent)> FilesWithExtension(String extension) {
-			List<(int FileID, String Basename, String filePath, String extension, int size, int parent)> values = new();
+		/// <summary>
+		/// Searches the database for all files wich contain <paramref name="extension">extensnion</paramref> and places column data in <c>FileData</c> structs.
+		/// </summary>
+		/// <param name="extension">The file extension to search for I.E ".txt"</param>
+		/// <returns>a Dictionary using fileID as a key with a value of the cooresponding FileData</returns>
+		//TODO come up with a better way to store fileID
+		public List<FileData> FilesWithExtension(string extension) {
+			List<FileData> values = new();
 			PrepCommands();
 			QueryCommand.CommandText = "SELECT * FROM files WHERE extension=\"" + extension + "\"";
 			using (var reader = QueryCommand.ExecuteReader()) {
 				while (reader.Read()) {
-					values.Add((reader.GetInt32(0), reader.GetString(1), reader.GetString(2), reader.GetString(3), reader.GetInt32(4), reader.GetInt32(4)));
+					values.Add(new FileData(
+						reader.GetInt32(0),
+						reader.GetString(1),
+						reader.GetString(2),
+						reader.GetString(3),
+						reader.GetInt64(4),
+						reader.GetInt32(5)));
 				}
 			}
 			return values;

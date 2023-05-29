@@ -13,9 +13,16 @@
 			//db.AddFolder("Z:\\",0);
 			//db.TestFunction("C:\\");
 			Thread.Sleep(2000);
-			List<(int, String, String, String, int, int)> values = db.FilesWithExtension(".cc");
-			foreach ((int, String, String, String, int, int) t in values) {
-				Console.WriteLine(t);
+			List<FileData> files = db.FilesWithExtension(".zip");
+			foreach (FileData file in files) {
+				Console.WriteLine("==========================================");
+				Console.WriteLine("\n fileID: " + file.GetFileID().ToString());
+				Console.WriteLine("\n File Name: " + file.GetName());
+				Console.WriteLine("\n File Path: " + file.GetPath());
+				Console.WriteLine("\n File Extension: " + file.GetExtension());
+				Console.WriteLine("\n File Size: " + file.GetSize().ToString());
+				Console.WriteLine("\n Parent Folder Index: " + file.GetParentIndex().ToString());
+				Console.WriteLine("==========================================");
 			}
 		}
 	}
