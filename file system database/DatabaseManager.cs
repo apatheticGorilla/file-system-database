@@ -82,6 +82,7 @@ namespace file_system_database {
 			//basic command for queries
 			QueryCommand = connection.CreateCommand();
 		}
+
 		/// <summary>
 		///		Creates the database tables and an index for faster population.
 		/// </summary>
@@ -97,8 +98,7 @@ namespace file_system_database {
 					file_path TEXT,
 					extension TEXT,
 					size INT,
-					parent INT,
-					FOREIGN KEY (parent) REFERENCES folders (rowid)
+					parent INT
 					);
 				CREATE TABLE folders(
 				basename TEXT,
@@ -106,6 +106,7 @@ namespace file_system_database {
 				parent INT
 				);
 				CREATE UNIQUE INDEX folder_path ON folders(folder_path);
+				CREATE INDEX parent ON folders(parent);
 			";
 			command.ExecuteNonQuery();
 			transaction.Commit();
@@ -159,6 +160,7 @@ namespace file_system_database {
 			string extension = fi.Extension;
 			return new FileData(-1, name, path, extension, size, parentIndex);
 		}
+
 		/// <summary>
 		/// The heart of database population, making use of recursion to scan file systems
 		/// </summary>
