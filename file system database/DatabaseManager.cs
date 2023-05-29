@@ -1,4 +1,5 @@
 ﻿using Microsoft.Data.Sqlite;
+using System.Diagnostics;
 using System.Text;
 
 namespace file_system_database {
@@ -156,7 +157,7 @@ namespace file_system_database {
 				//TODO logging
 			}
 			string extension = fi.Extension;
-			return new FileData(-1,name, path, extension, size, parentIndex);
+			return new FileData(-1, name, path, extension, size, parentIndex);
 		}
 		/// <summary>
 		/// The heart of database population, making use of recursion to scan file systems
@@ -427,6 +428,41 @@ namespace file_system_database {
 				}
 			}
 			return values;
+		}
+
+		/// <summary>
+		/// Finds all subfolders inside the reference folder and writes the structure to the output folder.
+		/// </summary>
+		/// <param name="referenceFolder">The folder to mimic the structure of.</param>
+		/// <param name="outputFolder">The file path that the structure is written to.</param>
+		public void RecreateFolderStructure(string referenceFolder, string outputFolder) {
+			//get folder basename
+			string basename = "";
+			//TODO replace with a command for this method only.
+			PrepCommands();
+			QueryCommand.CommandText = "SELECT basename FROM folders WHERE folder_path=\"" + referenceFolder + "\"";
+			using (var reader = QueryCommand.ExecuteReader()) {
+				while (reader.Read()) basename = reader.GetString(0);
+			}
+			Debug.Assert(basename.Length > 0);
+
+			//create the directory
+			string dir = outputFolder + "\\" + basename; //TODO check if backslash is already in the path and don't concatenate
+			if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
+			else Debug.WriteLine("The folder " + dir + " already exists");
+
+			//get paths of child folders
+			//FIXME: this query has a 
+			int index = FolderIndex(referenceFolder);
+			QueryCommand.CommandText = "SELECT folder_path FROM folders WHERE parent = \"" + index + "\"";
+			List<string> children = new();
+			using (var reader = QueryCommand.ExecuteReader()) {
+				while (reader.Read()) children.Add(reader.GetString(0));
+			}
+			//Recursivley create structure for each child
+			foreach (var child in children) {
+				RecreateFolderStructure(child, dir);
+			}
 		}
 	}
 }
