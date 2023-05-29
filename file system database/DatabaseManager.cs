@@ -37,7 +37,7 @@ namespace file_system_database {
 
 		/// <summary>
 		/// Prepares parameters and commands for use.
-		/// This must be called after creating a transaction that will use these commands.
+		/// This must be called after creating a transaction that will use these commands and must be called again after committing that transaction.
 		/// </summary>
 		void PrepCommands() {
 			//Command for adding files to DB
@@ -82,7 +82,7 @@ namespace file_system_database {
 			QueryCommand = connection.CreateCommand();
 		}
 		/// <summary>
-		///		Creates the database
+		///		Creates the database tables and an index for faster population.
 		/// </summary>
 		public void Create() {
 			var transaction = connection.BeginTransaction();
@@ -249,9 +249,11 @@ namespace file_system_database {
 			List<int> indexes = new() {
 				FolderIndex(path)
 			};
+			//get children
 			indexes.AddRange(GetSubfolders(indexes));
 			string query = FormatInQuery(indexes);
 			var command = connection.CreateCommand();
+			//delete the records.
 			command.CommandText = @"
 				DELETE FROM folders WHERE folder_id IN($indexes);
 				DELETE FROM files WHERE parent IN($indexes);
@@ -261,6 +263,7 @@ namespace file_system_database {
 			command.Parameters.Add(paramIndexes);
 			paramIndexes.Value = query;
 			command.ExecuteNonQuery();
+
 			Vacuum();
 			transaction.Commit();
 		}
@@ -337,8 +340,8 @@ namespace file_system_database {
 		/// <summary>
 		/// turns list of items into a single string for queries using WHERE ___ IN
 		/// </summary>
-		/// <param name="items"></param>
-		/// <returns></returns>
+		/// <param name="items">an array of strings</param>
+		/// <returns>A comma delimited string of input values</returns>
 		static string FormatInQuery(string[] items) {
 			StringBuilder sb = new("");
 			foreach (string item in items) {
@@ -354,8 +357,8 @@ namespace file_system_database {
 		/// <summary>
 		/// turns list of items into a single string for queries using WHERE ___ IN
 		/// </summary>
-		/// <param name="items"></param>
-		/// <returns></returns>
+		/// <param name="items">a List of strings</param>
+		/// <returns>A comma delimited string of input values</returns>
 		static string FormatInQuery(List<int> items) {
 			StringBuilder sb = new("");
 			foreach (int item in items) {
@@ -371,7 +374,7 @@ namespace file_system_database {
 		/// Recursively queries database for the children of the given folder and the children of all subfolders
 		/// </summary>
 		/// <param name="folders">Indexes of the folders to query</param>
-		/// <returns>Indexes of all folders</returns>
+		/// <returns>Indexes of all child folders</returns>
 		List<int> GetSubfolders(List<int> folders) {
 			List<int> subfolders = new();
 			string query = FormatInQuery(folders);
@@ -409,7 +412,7 @@ namespace file_system_database {
 		/// Searches the database for all files wich contain <paramref name="extension">extensnion</paramref> and places column data in <c>FileData</c> structs.
 		/// </summary>
 		/// <param name="extension">The file extension to search for I.E ".txt"</param>
-		/// <returns>a Dictionary using fileID as a key with a value of the cooresponding FileData</returns>
+		/// <returns>A list of FileData objects</returns>
 		//TODO come up with a better way to store fileID
 		public List<FileData> FilesWithExtension(string extension) {
 			List<FileData> values = new();
