@@ -1,7 +1,7 @@
 ﻿namespace file_system_database {
 
 
-	internal readonly struct FileData {
+	public readonly struct FileData {
 		readonly string name;
 		readonly string path;
 		readonly string extension;
