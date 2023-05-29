@@ -155,7 +155,7 @@ namespace file_system_database {
 				size = fi.Length;
 			}
 			catch (FileNotFoundException) {
-				//TODO logging
+				Debug.WriteLine("Could not find file: " + path);
 			}
 			string extension = fi.Extension;
 			return new FileData(-1, name, path, extension, size, parentIndex);
@@ -183,12 +183,12 @@ namespace file_system_database {
 				paths = Directory.GetDirectories(path);
 			}
 			catch (UnauthorizedAccessException) {
-				Console.WriteLine("Access Denied: {0}", path);
+				Debug.WriteLine("Access Denied: " +  path);
 				searchDepth--;
 				return;
 			}
 			catch (DirectoryNotFoundException) {
-				Console.WriteLine("Could not Find: {0}", path);
+				Debug.WriteLine("Could not Find: " + path);
 				searchDepth--;
 				return;
 			}
