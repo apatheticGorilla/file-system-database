@@ -99,11 +99,11 @@ namespace file_system_database {
 					extension TEXT,
 					size INT,
 					parent INT
-					);
+				);
 				CREATE TABLE folders(
-				basename TEXT,
-				folder_path TEXT,
-				parent INT
+					basename TEXT,
+					folder_path TEXT,
+					parent INT
 				);
 				CREATE UNIQUE INDEX folder_path ON folders(folder_path);
 				CREATE INDEX parent ON folders(parent);
@@ -194,15 +194,13 @@ namespace file_system_database {
 			}
 
 			//save data for each folder to a struct and add to the list.
-			foreach (string directory in paths) {
+			foreach (string directory in paths) 
 				folderData.Add(new FolderData(directory, parentIndex));
-			}
 
 			//get files and save their info to a list of structs.
-			foreach (string file in Directory.GetFiles(path)) {
-				//FileData d = new(file, parentIndex);
+			foreach (string file in Directory.GetFiles(path)) 
 				fileData.Add(ScanFile(file, parentIndex));
-			}
+
 			//insert into database in bulk.
 			AddFilesToDatabase(fileData);
 			AddFoldersToDatabase(folderData);
@@ -231,7 +229,7 @@ namespace file_system_database {
 			DirectoryInfo di = new(path);
 			int index = 0;
 
-			if (di.Parent != null) index = FolderIndex(di.Parent.ToString());
+			if (di.Parent != null) index = FolderIndex(di.Parent.ToString()); //TODO see what happens if the parent is not in the database
 			folderData.Add(new FolderData(path, index));
 			var transaction = connection.BeginTransaction();
 			PrepCommands();
@@ -250,10 +248,12 @@ namespace file_system_database {
 			List<int> indexes = new() {
 				FolderIndex(path)
 			};
+
 			//get children
 			indexes.AddRange(GetSubfolders(indexes));
 			string query = FormatInQuery(indexes);
 			var command = connection.CreateCommand();
+
 			//delete the records.
 			command.CommandText = @"
 				DELETE FROM folders WHERE rowid IN($indexes);
@@ -312,10 +312,8 @@ namespace file_system_database {
 			QueryCommand.CommandText = "SELECT Folder_path, rowid FROM folders WHERE folder_path IN(" + query + ")";
 
 			using (var reader = QueryCommand.ExecuteReader()) {
-
-				while (reader.Read()) {
+				while (reader.Read()) 
 					ids.Add(reader.GetString(0), reader.GetInt32(1));
-				}
 			}
 			return ids;
 		}
@@ -324,7 +322,7 @@ namespace file_system_database {
 		/// Queries the database for the index of the given folder.
 		/// </summary>
 		/// <param name="folder">Filepath of the folder</param>
-		/// <returns>rowid from the cooresponding database row</returns>
+		/// <returns>rowid from the corresponding database row</returns>
 		int FolderIndex(string folder) {
 			var command = connection.CreateCommand();
 			command.CommandText = "SELECT rowid FROM folders WHERE folder_path = $path";
@@ -381,13 +379,12 @@ namespace file_system_database {
 			string query = FormatInQuery(folders);
 			QueryCommand.CommandText = "SELECT rowid FROM folders WHERE parent IN(" + query + ")";
 			using (var reader = QueryCommand.ExecuteReader()) {
-				while (reader.Read()) {
+				while (reader.Read()) 
 					subfolders.Add(reader.GetInt32(0));
-				}
 			}
-			if (subfolders.Count > 0) {
+			if (subfolders.Count > 0) 
 				subfolders.AddRange(GetSubfolders(subfolders));
-			}
+			
 			return subfolders;
 		}
 
@@ -410,7 +407,7 @@ namespace file_system_database {
 		//}
 
 		/// <summary>
-		/// Searches the database for all files wich contain <paramref name="extension">extensnion</paramref> and places column data in <c>FileData</c> structs.
+		/// Searches the database for all files which contain <paramref name="extension">extension</paramref> and places column data in <c>FileData</c> structs.
 		/// </summary>
 		/// <param name="extension">The file extension to search for I.E ".txt"</param>
 		/// <returns>A list of FileData objects</returns>
@@ -437,17 +434,15 @@ namespace file_system_database {
 		/// </summary>
 		/// <param name="referenceFolder">The folder to mimic the structure of.</param>
 		/// <param name="outputFolder">The file path that the structure is written to.</param>
-
-
 		public void RecreateFolderStructure(string referenceFolder, string outputFolder) {
 			PrepCommands();
 			recreateFolderStructure(referenceFolder, outputFolder);
 		}
+
 		void recreateFolderStructure(string referenceFolder, string outputFolder) {
 			//get folder basename
 			string basename = "";
-			//TODO replace with a command for this method only.
-			//PrepCommands();
+
 			QueryCommand.CommandText = "SELECT basename FROM folders WHERE folder_path=\"" + referenceFolder + "\"";
 			using (var reader = QueryCommand.ExecuteReader()) {
 				while (reader.Read()) basename = reader.GetString(0);
@@ -466,10 +461,8 @@ namespace file_system_database {
 			using (var reader = QueryCommand.ExecuteReader()) {
 				while (reader.Read()) children.Add(reader.GetString(0));
 			}
-			//Recursivley create structure for each child
-			foreach (var child in children) {
-				recreateFolderStructure(child, dir);
-			}
+			//Recursively create structure for each child
+			foreach (var child in children) recreateFolderStructure(child, dir);
 		}
 	}
 }
