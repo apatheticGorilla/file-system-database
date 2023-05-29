@@ -421,12 +421,12 @@ namespace file_system_database {
 			using (var reader = QueryCommand.ExecuteReader()) {
 				while (reader.Read()) {
 					values.Add(new FileData(
-						reader.GetInt32(0),
+						0,
+						reader.GetString(0),
 						reader.GetString(1),
 						reader.GetString(2),
-						reader.GetString(3),
-						reader.GetInt64(4),
-						reader.GetInt32(5)));
+						reader.GetInt64(3),
+						reader.GetInt32(4)));
 				}
 			}
 			return values;
