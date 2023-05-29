@@ -449,7 +449,11 @@ namespace file_system_database {
 			Debug.Assert(basename.Length > 0);
 
 			//create the directory
-			string dir = outputFolder + "\\" + basename; //TODO check if backslash is already in the path and don't concatenate
+			string dir;
+			if (outputFolder.LastIndexOf('\\') == (basename.Length - 1))
+				dir = outputFolder + basename;
+			else
+				dir = outputFolder + "\\" + basename;
 			if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
 			else Debug.WriteLine("The folder " + dir + " already exists");
 
