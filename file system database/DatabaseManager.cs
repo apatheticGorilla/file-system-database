@@ -454,7 +454,6 @@ namespace file_system_database {
 			else Debug.WriteLine("The folder " + dir + " already exists");
 
 			//get paths of child folders
-			//FIXME: this query has a 
 			int index = FolderIndex(referenceFolder);
 			QueryCommand.CommandText = "SELECT folder_path FROM folders WHERE parent = \"" + index + "\"";
 			List<string> children = new();
