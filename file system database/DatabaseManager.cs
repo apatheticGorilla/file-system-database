@@ -92,16 +92,14 @@ namespace file_system_database {
 				DROP TABLE IF EXISTS folders;
 				DROP INDEX IF EXISTS folder_path;
 				CREATE TABLE files(
-					file_id INTEGER PRIMARY KEY AUTOINCREMENT,
 					basename TEXT,
 					file_path TEXT,
 					extension TEXT,
 					size INT,
 					parent INT,
-					FOREIGN KEY (parent) REFERENCES folders (folder_id)
+					FOREIGN KEY (parent) REFERENCES folders (rowid)
 					);
 				CREATE TABLE folders(
-				folder_id INTEGER PRIMARY KEY AUTOINCREMENT,
 				basename TEXT,
 				folder_path TEXT,
 				parent INT
@@ -164,7 +162,7 @@ namespace file_system_database {
 		/// The heart of database population, making use of recursion to scan file systems
 		/// </summary>
 		/// <param name="path">Filepath of the folder to scan</param>
-		/// <param name="parentIndex">Folder_id of the parent folder, passed to the method to cut down on queries</param>
+		/// <param name="parentIndex">rowid of the parent folder, passed to the method to cut down on queries</param>
 		private void Scan(string path, int parentIndex) {
 			searchDepth++;
 			//end execution if max search depth is reached.
@@ -255,7 +253,7 @@ namespace file_system_database {
 			var command = connection.CreateCommand();
 			//delete the records.
 			command.CommandText = @"
-				DELETE FROM folders WHERE folder_id IN($indexes);
+				DELETE FROM folders WHERE rowid IN($indexes);
 				DELETE FROM files WHERE parent IN($indexes);
 				";
 			var paramIndexes = command.CreateParameter();
@@ -308,7 +306,7 @@ namespace file_system_database {
 			Dictionary<string, int> ids = new();
 			if (folders.Length == 0) return ids;
 			string query = FormatInQuery(folders);
-			QueryCommand.CommandText = "SELECT Folder_path, folder_id FROM folders WHERE folder_path IN(" + query + ")";
+			QueryCommand.CommandText = "SELECT Folder_path, rowid FROM folders WHERE folder_path IN(" + query + ")";
 
 			using (var reader = QueryCommand.ExecuteReader()) {
 
@@ -323,10 +321,10 @@ namespace file_system_database {
 		/// Queries the database for the index of the given folder.
 		/// </summary>
 		/// <param name="folder">Filepath of the folder</param>
-		/// <returns>Folder_ID from the cooresponding database row</returns>
+		/// <returns>rowid from the cooresponding database row</returns>
 		int FolderIndex(string folder) {
 			var command = connection.CreateCommand();
-			command.CommandText = "SELECT folder_id FROM folders WHERE folder_path = $path";
+			command.CommandText = "SELECT rowid FROM folders WHERE folder_path = $path";
 			var paramfolder = command.CreateParameter();
 			paramfolder.ParameterName = "path";
 			paramfolder.Value = folder;
@@ -378,7 +376,7 @@ namespace file_system_database {
 		List<int> GetSubfolders(List<int> folders) {
 			List<int> subfolders = new();
 			string query = FormatInQuery(folders);
-			QueryCommand.CommandText = "SELECT folder_id FROM folders WHERE parent IN(" + query + ")";
+			QueryCommand.CommandText = "SELECT rowid FROM folders WHERE parent IN(" + query + ")";
 			using (var reader = QueryCommand.ExecuteReader()) {
 				while (reader.Read()) {
 					subfolders.Add(reader.GetInt32(0));
@@ -413,7 +411,6 @@ namespace file_system_database {
 		/// </summary>
 		/// <param name="extension">The file extension to search for I.E ".txt"</param>
 		/// <returns>A list of FileData objects</returns>
-		//TODO come up with a better way to store fileID
 		public List<FileData> FilesWithExtension(string extension) {
 			List<FileData> values = new();
 			PrepCommands();
