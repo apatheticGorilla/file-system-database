@@ -463,7 +463,7 @@ namespace file_system_database {
 			Debug.Assert(basename.Length > 0);
 
 			//create the directory
-			string dir = outputFolder + "\\" + basename.Replace(":","");
+			string dir = outputFolder + "\\" + basename.Replace(":", "");
 			if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
 			else Debug.WriteLine("The folder " + dir + " already exists");
 
@@ -488,8 +488,24 @@ namespace file_system_database {
 			//create the folders 
 			recreateFolderStructure(referenceFolder, outputFolder);
 
+			string refFolder;
+			string outFolder = outputFolder;
+			List<int> folders;
+			//get subfolders and handle file path edge cases
+			if (referenceFolder.Length <= 3) { //referenceFolder is a drive letter
+				folders = GetSubfolders(referenceFolder);
+				outFolder = outFolder + referenceFolder[..1] + "\\";
+				refFolder = referenceFolder;
+			} else if (referenceFolder.EndsWith('\\')) {
+				refFolder = referenceFolder[..(referenceFolder.Length - 1)]; //remove extra '\'
+				folders = GetSubfolders(refFolder);
+				refFolder = refFolder[..refFolder.LastIndexOf("\\")];
+			} else {
+				folders = GetSubfolders(referenceFolder);
+				refFolder = referenceFolder[..referenceFolder.LastIndexOf("\\")];
+			}
+
 			//get paths of files residing in the folders
-			List<int> folders = GetSubfolders(referenceFolder);
 			string parentQuery = FormatInQuery(folders);
 			QueryCommand.CommandText = "SELECT file_path FROM files WHERE parent IN(" + parentQuery + ")";
 			List<string> files = new();
@@ -498,10 +514,9 @@ namespace file_system_database {
 			}
 
 			//write files
-			string refFolder = referenceFolder[..referenceFolder.LastIndexOf("\\")];
 			for (int i = 0; i < files.Count; i++) {
 				//change file path to target outputFolder
-				string file = files[i].Replace(refFolder, outputFolder);
+				string file = files[i].Replace(refFolder, outFolder);
 				File.Create(file).Close();
 			}
 		}
