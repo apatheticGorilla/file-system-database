@@ -183,7 +183,7 @@ namespace file_system_database {
 				paths = Directory.GetDirectories(path);
 			}
 			catch (UnauthorizedAccessException) {
-				Debug.WriteLine("Access Denied: " +  path);
+				Debug.WriteLine("Access Denied: " + path);
 				searchDepth--;
 				return;
 			}
@@ -194,11 +194,11 @@ namespace file_system_database {
 			}
 
 			//save data for each folder to a struct and add to the list.
-			foreach (string directory in paths) 
+			foreach (string directory in paths)
 				folderData.Add(new FolderData(directory, parentIndex));
 
 			//get files and save their info to a list of structs.
-			foreach (string file in Directory.GetFiles(path)) 
+			foreach (string file in Directory.GetFiles(path))
 				fileData.Add(ScanFile(file, parentIndex));
 
 			//insert into database in bulk.
@@ -312,7 +312,7 @@ namespace file_system_database {
 			QueryCommand.CommandText = "SELECT Folder_path, rowid FROM folders WHERE folder_path IN(" + query + ")";
 
 			using (var reader = QueryCommand.ExecuteReader()) {
-				while (reader.Read()) 
+				while (reader.Read())
 					ids.Add(reader.GetString(0), reader.GetInt32(1));
 			}
 			return ids;
@@ -379,13 +379,26 @@ namespace file_system_database {
 			string query = FormatInQuery(folders);
 			QueryCommand.CommandText = "SELECT rowid FROM folders WHERE parent IN(" + query + ")";
 			using (var reader = QueryCommand.ExecuteReader()) {
-				while (reader.Read()) 
+				while (reader.Read())
 					subfolders.Add(reader.GetInt32(0));
 			}
-			if (subfolders.Count > 0) 
+			if (subfolders.Count > 0)
 				subfolders.AddRange(GetSubfolders(subfolders));
-			
+
 			return subfolders;
+		}
+
+		/// <summary>
+		/// Recursively queries database for the children of the given folder and the children of all subfolders
+		/// </summary>
+		/// <param name="folderPath">File path of the folder to query</param>
+		/// <returns>Indexes of all child folder</returns>
+		List<int> GetSubfolders(string folderPath) {
+			List<int> folder = new() {
+				FolderIndex(folderPath)
+			};
+
+			return GetSubfolders(folder);
 		}
 
 		/// <summary>
@@ -463,6 +476,34 @@ namespace file_system_database {
 			}
 			//Recursively create structure for each child
 			foreach (var child in children) recreateFolderStructure(child, dir);
+		}
+
+		/// <summary>
+		/// Finds all subfolders inside the reference folder and writes the structure to the output folder and creates empty files in place of the originals.
+		/// </summary>
+		/// <param name="referenceFolder">The folder to mimic the structure of.</param>
+		/// <param name="outputFolder">The file path that the structure is written to.</param>
+		public void RecreateFileStructure(string referenceFolder, string outputFolder) {
+			PrepCommands();
+			//create the folders 
+			recreateFolderStructure(referenceFolder, outputFolder);
+
+			//get paths of files residing in the folders
+			List<int> folders = GetSubfolders(referenceFolder);
+			string parentQuery = FormatInQuery(folders);
+			QueryCommand.CommandText = "SELECT file_path FROM files WHERE parent IN(" + parentQuery + ")";
+			List<string> files = new();
+			using (var reader = QueryCommand.ExecuteReader()) {
+				while (reader.Read()) files.Add(reader.GetString(0));
+			}
+
+			//write files
+			string refFolder = referenceFolder[..referenceFolder.LastIndexOf("\\")];
+			for (int i = 0; i < files.Count; i++) {
+				//change file path to target outputFolder
+				string file = files[i].Replace(refFolder, outputFolder);
+				File.Create(file).Close();
+			}
 		}
 	}
 }
