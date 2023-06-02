@@ -455,8 +455,10 @@ namespace file_system_database {
 		void recreateFolderStructure(string referenceFolder, string outputFolder) {
 			//get folder basename
 			string basename = "";
-
-			QueryCommand.CommandText = "SELECT basename FROM folders WHERE folder_path=\"" + referenceFolder + "\"";
+			if (referenceFolder.EndsWith('\\'))
+				QueryCommand.CommandText = "SELECT basename FROM folders WHERE folder_path=\"" + referenceFolder[..referenceFolder.LastIndexOf("\\")] + "\"";
+			else
+				QueryCommand.CommandText = "SELECT basename FROM folders WHERE folder_path=\"" + referenceFolder + "\"";
 			using (var reader = QueryCommand.ExecuteReader()) {
 				while (reader.Read()) basename = reader.GetString(0);
 			}
