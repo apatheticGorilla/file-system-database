@@ -463,7 +463,7 @@ namespace file_system_database {
 			Debug.Assert(basename.Length > 0);
 
 			//create the directory
-			string dir = outputFolder + "\\" + basename;
+			string dir = outputFolder + "\\" + basename.Replace(":","");
 			if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
 			else Debug.WriteLine("The folder " + dir + " already exists");
 
