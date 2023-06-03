@@ -128,7 +128,8 @@ namespace file_system_database {
 			maxDepth = maxSearchDepth;
 			List<FolderData> folderData = new();
 			foreach (string path in paths) {
-				folderData.Add(new FolderData(path, 0));
+				DirectoryInfo dirInfo = new(path);
+				folderData.Add(new FolderData(dirInfo.Name, path, 0));
 			}
 
 			command.ExecuteNonQuery();
@@ -194,8 +195,10 @@ namespace file_system_database {
 			}
 
 			//save data for each folder to a struct and add to the list.
-			foreach (string directory in paths)
-				folderData.Add(new FolderData(directory, parentIndex));
+			foreach (string directory in paths) {
+				DirectoryInfo dirInfo = new(directory);
+				folderData.Add(new FolderData(dirInfo.Name, directory, parentIndex));
+			}
 
 			//get files and save their info to a list of structs.
 			foreach (string file in Directory.GetFiles(path))
@@ -230,7 +233,8 @@ namespace file_system_database {
 			int index = 0;
 
 			if (di.Parent != null) index = FolderIndex(di.Parent.ToString()); //TODO see what happens if the parent is not in the database
-			folderData.Add(new FolderData(path, index));
+			DirectoryInfo dirInfo = new(path);
+			folderData.Add(new FolderData(dirInfo.Name, path, index));
 			var transaction = connection.BeginTransaction();
 			PrepCommands();
 			AddFoldersToDatabase(folderData);
