@@ -333,7 +333,7 @@ namespace file_system_database {
 			using (var reader = command.ExecuteReader()) {
 				while (reader.Read()) return reader.GetInt32(0);
 			}
-			return 0;
+			throw new System.Data.RowNotInTableException("Database does not contain a folder with path: " + folder);
 		}
 
 		/// <summary>
@@ -453,12 +453,20 @@ namespace file_system_database {
 		}
 
 		void recreateFolderStructure(string referenceFolder, string outputFolder) {
+
+			int index;
+			//handle referenceFolder having an extra backslash at the end
+			//if referenceFolder has a length of 3 then it is a drive letter and should not have the backslash removed
+			if (!referenceFolder.EndsWith('\\') || referenceFolder.Length == 3) {
+				QueryCommand.CommandText = "SELECT basename FROM folders WHERE folder_path=\"" + referenceFolder + "\"";
+				index = FolderIndex(referenceFolder);
+			} else {
+				QueryCommand.CommandText = "SELECT basename FROM folders WHERE folder_path=\"" + referenceFolder[..(referenceFolder.Length - 1)] + "\"";
+				index = FolderIndex(referenceFolder[..(referenceFolder.Length - 1)]);
+			}
+
 			//get folder basename
 			string basename = "";
-			if (referenceFolder.EndsWith('\\'))
-				QueryCommand.CommandText = "SELECT basename FROM folders WHERE folder_path=\"" + referenceFolder[..referenceFolder.LastIndexOf("\\")] + "\"";
-			else
-				QueryCommand.CommandText = "SELECT basename FROM folders WHERE folder_path=\"" + referenceFolder + "\"";
 			using (var reader = QueryCommand.ExecuteReader()) {
 				while (reader.Read()) basename = reader.GetString(0);
 			}
@@ -470,7 +478,6 @@ namespace file_system_database {
 			else Debug.WriteLine("The folder " + dir + " already exists");
 
 			//get paths of child folders
-			int index = FolderIndex(referenceFolder);
 			QueryCommand.CommandText = "SELECT folder_path FROM folders WHERE parent = \"" + index + "\"";
 			List<string> children = new();
 			using (var reader = QueryCommand.ExecuteReader()) {
