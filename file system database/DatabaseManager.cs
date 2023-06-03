@@ -132,7 +132,6 @@ namespace file_system_database {
 				folderData.Add(new FolderData(dirInfo.Name, path, 0));
 			}
 
-			command.ExecuteNonQuery();
 			AddFoldersToDatabase(folderData);
 			Dictionary<string, int> ids = FolderIDs(paths);
 			foreach (string pth in paths) {
