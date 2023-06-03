@@ -129,7 +129,7 @@ namespace file_system_database {
 			List<FolderData> folderData = new();
 			foreach (string path in paths) {
 				DirectoryInfo dirInfo = new(path);
-				folderData.Add(new FolderData(dirInfo.Name, path, 0));
+				folderData.Add(new FolderData(dirInfo.Name, path, -1));
 			}
 
 			AddFoldersToDatabase(folderData);
@@ -229,7 +229,7 @@ namespace file_system_database {
 			maxDepth = maxSearchDepth;
 			List<FolderData> folderData = new();
 			DirectoryInfo di = new(path);
-			int index = 0;
+			int index = -1;
 
 			if (di.Parent != null) index = FolderIndex(di.Parent.ToString()); //TODO see what happens if the parent is not in the database
 			DirectoryInfo dirInfo = new(path);
@@ -434,7 +434,7 @@ namespace file_system_database {
 			using (var reader = QueryCommand.ExecuteReader()) {
 				while (reader.Read()) {
 					values.Add(new FileData(
-						0,
+						-1,
 						reader.GetString(0),
 						reader.GetString(1),
 						reader.GetString(2),
