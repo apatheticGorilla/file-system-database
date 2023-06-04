@@ -321,7 +321,7 @@ namespace file_system_database {
 		/// Queries the database for the index of the given folder.
 		/// </summary>
 		/// <param name="folder">Filepath of the folder</param>
-		/// <returns>rowid from the corresponding database row</returns>
+		/// <returns>rowid from the cooresponding database row</returns>
 		int FolderIndex(string folder) {
 			var command = connection.CreateCommand();
 			command.CommandText = "SELECT rowid FROM folders WHERE folder_path = $path";
@@ -407,7 +407,7 @@ namespace file_system_database {
 		//}
 
 		/// <summary>
-		/// Searches the database for all files which contain <paramref name="extension">extension</paramref> and places column data in <c>FileData</c> structs.
+		/// Searches the database for all files wich contain <paramref name="extension">extensnion</paramref> and places column data in <c>FileData</c> structs.
 		/// </summary>
 		/// <param name="extension">The file extension to search for I.E ".txt"</param>
 		/// <returns>A list of FileData objects</returns>
