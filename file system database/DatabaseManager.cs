@@ -1,4 +1,5 @@
 ﻿using Microsoft.Data.Sqlite;
+using System.Diagnostics;
 using System.Text;
 
 namespace file_system_database {
@@ -81,6 +82,7 @@ namespace file_system_database {
 			//basic command for queries
 			QueryCommand = connection.CreateCommand();
 		}
+
 		/// <summary>
 		///		Creates the database tables and an index for faster population.
 		/// </summary>
@@ -96,15 +98,15 @@ namespace file_system_database {
 					file_path TEXT,
 					extension TEXT,
 					size INT,
-					parent INT,
-					FOREIGN KEY (parent) REFERENCES folders (rowid)
-					);
+					parent INT
+				);
 				CREATE TABLE folders(
-				basename TEXT,
-				folder_path TEXT,
-				parent INT
+					basename TEXT,
+					folder_path TEXT,
+					parent INT
 				);
 				CREATE UNIQUE INDEX folder_path ON folders(folder_path);
+				CREATE INDEX parent ON folders(parent);
 			";
 			command.ExecuteNonQuery();
 			transaction.Commit();
@@ -126,10 +128,10 @@ namespace file_system_database {
 			maxDepth = maxSearchDepth;
 			List<FolderData> folderData = new();
 			foreach (string path in paths) {
-				folderData.Add(new FolderData(path, 0));
+				DirectoryInfo dirInfo = new(path);
+				folderData.Add(new FolderData(dirInfo.Name, path, -1));
 			}
 
-			command.ExecuteNonQuery();
 			AddFoldersToDatabase(folderData);
 			Dictionary<string, int> ids = FolderIDs(paths);
 			foreach (string pth in paths) {
@@ -153,11 +155,12 @@ namespace file_system_database {
 				size = fi.Length;
 			}
 			catch (FileNotFoundException) {
-				//TODO logging
+				Debug.WriteLine("Could not find file: " + path);
 			}
 			string extension = fi.Extension;
-			return new FileData(-1,name, path, extension, size, parentIndex);
+			return new FileData(-1, name, path, extension, size, parentIndex);
 		}
+
 		/// <summary>
 		/// The heart of database population, making use of recursion to scan file systems
 		/// </summary>
@@ -180,26 +183,26 @@ namespace file_system_database {
 				paths = Directory.GetDirectories(path);
 			}
 			catch (UnauthorizedAccessException) {
-				Console.WriteLine("Access Denied: {0}", path);
+				Debug.WriteLine("Access Denied: " + path);
 				searchDepth--;
 				return;
 			}
 			catch (DirectoryNotFoundException) {
-				Console.WriteLine("Could not Find: {0}", path);
+				Debug.WriteLine("Could not Find: " + path);
 				searchDepth--;
 				return;
 			}
 
 			//save data for each folder to a struct and add to the list.
 			foreach (string directory in paths) {
-				folderData.Add(new FolderData(directory, parentIndex));
+				DirectoryInfo dirInfo = new(directory);
+				folderData.Add(new FolderData(dirInfo.Name, directory, parentIndex));
 			}
 
 			//get files and save their info to a list of structs.
-			foreach (string file in Directory.GetFiles(path)) {
-				//FileData d = new(file, parentIndex);
+			foreach (string file in Directory.GetFiles(path))
 				fileData.Add(ScanFile(file, parentIndex));
-			}
+
 			//insert into database in bulk.
 			AddFilesToDatabase(fileData);
 			AddFoldersToDatabase(folderData);
@@ -226,10 +229,11 @@ namespace file_system_database {
 			maxDepth = maxSearchDepth;
 			List<FolderData> folderData = new();
 			DirectoryInfo di = new(path);
-			int index = 0;
+			int index = -1;
 
-			if (di.Parent != null) index = FolderIndex(di.Parent.ToString());
-			folderData.Add(new FolderData(path, index));
+			if (di.Parent != null) index = FolderIndex(di.Parent.ToString()); //TODO see what happens if the parent is not in the database
+			DirectoryInfo dirInfo = new(path);
+			folderData.Add(new FolderData(dirInfo.Name, path, index));
 			var transaction = connection.BeginTransaction();
 			PrepCommands();
 			AddFoldersToDatabase(folderData);
@@ -247,10 +251,12 @@ namespace file_system_database {
 			List<int> indexes = new() {
 				FolderIndex(path)
 			};
+
 			//get children
 			indexes.AddRange(GetSubfolders(indexes));
 			string query = FormatInQuery(indexes);
 			var command = connection.CreateCommand();
+
 			//delete the records.
 			command.CommandText = @"
 				DELETE FROM folders WHERE rowid IN($indexes);
@@ -309,10 +315,8 @@ namespace file_system_database {
 			QueryCommand.CommandText = "SELECT Folder_path, rowid FROM folders WHERE folder_path IN(" + query + ")";
 
 			using (var reader = QueryCommand.ExecuteReader()) {
-
-				while (reader.Read()) {
+				while (reader.Read())
 					ids.Add(reader.GetString(0), reader.GetInt32(1));
-				}
 			}
 			return ids;
 		}
@@ -321,7 +325,7 @@ namespace file_system_database {
 		/// Queries the database for the index of the given folder.
 		/// </summary>
 		/// <param name="folder">Filepath of the folder</param>
-		/// <returns>rowid from the cooresponding database row</returns>
+		/// <returns>rowid from the corresponding database row</returns>
 		int FolderIndex(string folder) {
 			var command = connection.CreateCommand();
 			command.CommandText = "SELECT rowid FROM folders WHERE folder_path = $path";
@@ -332,7 +336,7 @@ namespace file_system_database {
 			using (var reader = command.ExecuteReader()) {
 				while (reader.Read()) return reader.GetInt32(0);
 			}
-			return 0;
+			throw new System.Data.RowNotInTableException("Database does not contain a folder with path: " + folder);
 		}
 
 		/// <summary>
@@ -378,14 +382,26 @@ namespace file_system_database {
 			string query = FormatInQuery(folders);
 			QueryCommand.CommandText = "SELECT rowid FROM folders WHERE parent IN(" + query + ")";
 			using (var reader = QueryCommand.ExecuteReader()) {
-				while (reader.Read()) {
+				while (reader.Read())
 					subfolders.Add(reader.GetInt32(0));
-				}
 			}
-			if (subfolders.Count > 0) {
+			if (subfolders.Count > 0)
 				subfolders.AddRange(GetSubfolders(subfolders));
-			}
+
 			return subfolders;
+		}
+
+		/// <summary>
+		/// Recursively queries database for the children of the given folder and the children of all subfolders
+		/// </summary>
+		/// <param name="folderPath">File path of the folder to query</param>
+		/// <returns>Indexes of all child folder</returns>
+		List<int> GetSubfolders(string folderPath) {
+			List<int> folder = new() {
+				FolderIndex(folderPath)
+			};
+
+			return GetSubfolders(folder);
 		}
 
 		/// <summary>
@@ -407,7 +423,7 @@ namespace file_system_database {
 		//}
 
 		/// <summary>
-		/// Searches the database for all files wich contain <paramref name="extension">extensnion</paramref> and places column data in <c>FileData</c> structs.
+		/// Searches the database for all files which contain <paramref name="extension">extension</paramref> and places column data in <c>FileData</c> structs.
 		/// </summary>
 		/// <param name="extension">The file extension to search for I.E ".txt"</param>
 		/// <returns>A list of FileData objects</returns>
@@ -418,15 +434,103 @@ namespace file_system_database {
 			using (var reader = QueryCommand.ExecuteReader()) {
 				while (reader.Read()) {
 					values.Add(new FileData(
-						reader.GetInt32(0),
+						-1,
+						reader.GetString(0),
 						reader.GetString(1),
 						reader.GetString(2),
-						reader.GetString(3),
-						reader.GetInt64(4),
-						reader.GetInt32(5)));
+						reader.GetInt64(3),
+						reader.GetInt32(4)));
 				}
 			}
 			return values;
+		}
+
+		/// <summary>
+		/// Finds all subfolders inside the reference folder and writes the structure to the output folder.
+		/// </summary>
+		/// <param name="referenceFolder">The folder to mimic the structure of.</param>
+		/// <param name="outputFolder">The file path that the structure is written to.</param>
+		public void RecreateFolderStructure(string referenceFolder, string outputFolder) {
+			PrepCommands();
+			recreateFolderStructure(referenceFolder, outputFolder);
+		}
+
+		void recreateFolderStructure(string referenceFolder, string outputFolder) {
+
+			int index;
+			//handle referenceFolder having an extra backslash at the end
+			//if referenceFolder has a length of 3 then it is a drive letter and should not have the backslash removed
+			if (!referenceFolder.EndsWith('\\') || referenceFolder.Length == 3) {
+				QueryCommand.CommandText = "SELECT basename FROM folders WHERE folder_path=\"" + referenceFolder + "\"";
+				index = FolderIndex(referenceFolder);
+			} else {
+				QueryCommand.CommandText = "SELECT basename FROM folders WHERE folder_path=\"" + referenceFolder[..(referenceFolder.Length - 1)] + "\"";
+				index = FolderIndex(referenceFolder[..(referenceFolder.Length - 1)]);
+			}
+
+			//get folder basename
+			string basename = "";
+			using (var reader = QueryCommand.ExecuteReader()) {
+				while (reader.Read()) basename = reader.GetString(0);
+			}
+			Debug.Assert(basename.Length > 0);
+
+			//create the directory
+			string dir = outputFolder + "\\" + basename.Replace(":", "");
+			if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
+			else Debug.WriteLine("The folder " + dir + " already exists");
+
+			//get paths of child folders
+			QueryCommand.CommandText = "SELECT folder_path FROM folders WHERE parent = \"" + index + "\"";
+			List<string> children = new();
+			using (var reader = QueryCommand.ExecuteReader()) {
+				while (reader.Read()) children.Add(reader.GetString(0));
+			}
+			//Recursively create structure for each child
+			foreach (var child in children) recreateFolderStructure(child, dir);
+		}
+
+		/// <summary>
+		/// Finds all subfolders inside the reference folder and writes the structure to the output folder and creates empty files in place of the originals.
+		/// </summary>
+		/// <param name="referenceFolder">The folder to mimic the structure of.</param>
+		/// <param name="outputFolder">The file path that the structure is written to.</param>
+		public void RecreateFileStructure(string referenceFolder, string outputFolder) {
+			PrepCommands();
+			//create the folders 
+			recreateFolderStructure(referenceFolder, outputFolder);
+
+			string refFolder;
+			string outFolder = outputFolder;
+			List<int> folders;
+			//get subfolders and handle file path edge cases
+			if (referenceFolder.Length <= 3) { //referenceFolder is a drive letter
+				folders = GetSubfolders(referenceFolder);
+				outFolder = outFolder + referenceFolder[..1] + "\\";
+				refFolder = referenceFolder;
+			} else if (referenceFolder.EndsWith('\\')) {
+				refFolder = referenceFolder[..(referenceFolder.Length - 1)]; //remove extra '\'
+				folders = GetSubfolders(refFolder);
+				refFolder = refFolder[..refFolder.LastIndexOf("\\")];
+			} else {
+				folders = GetSubfolders(referenceFolder);
+				refFolder = referenceFolder[..referenceFolder.LastIndexOf("\\")];
+			}
+
+			//get paths of files residing in the folders
+			string parentQuery = FormatInQuery(folders);
+			QueryCommand.CommandText = "SELECT file_path FROM files WHERE parent IN(" + parentQuery + ")";
+			List<string> files = new();
+			using (var reader = QueryCommand.ExecuteReader()) {
+				while (reader.Read()) files.Add(reader.GetString(0));
+			}
+
+			//write files
+			for (int i = 0; i < files.Count; i++) {
+				//change file path to target outputFolder
+				string file = files[i].Replace(refFolder, outFolder);
+				File.Create(file).Close();
+			}
 		}
 	}
 }
