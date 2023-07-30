@@ -19,7 +19,7 @@ namespace file_system_database {
 		private SqliteParameter DparamBasename;
 		private SqliteParameter DparamPath;
 		private SqliteParameter DparamParent;
-		Logger logger;
+		private static Logger logger = LogManager.GetCurrentClassLogger();
 
 		private int maxDepth;
 		private int searchDepth = 0;
@@ -30,13 +30,15 @@ namespace file_system_database {
 		/// <param name="dbPath">the filepath of the database file</param>
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
 		public DatabaseManager(string dbPath) {
-			//logger = new Logger();
-			//logger.Info("test");
+			//TODO: configure logger here
 			bool DbExists = File.Exists(dbPath);
 			connection = new("Data Source=" + dbPath);
 			connection.Open();
 			//automatically create tables if the file did not exist before opening the connection
-			if (!DbExists) Create();
+			if (!DbExists) {
+				Create();
+				logger.Info("No existing database found at the given path, a new one has been created.");
+			}
 		}
 #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
 
@@ -139,6 +141,7 @@ namespace file_system_database {
 			AddFoldersToDatabase(folderData);
 			Dictionary<string, int> ids = FolderIDs(paths);
 			foreach (string pth in paths) {
+				logger.Info("Scanning {0}", pth);
 				Scan(pth, ids[pth]);
 			}
 			transaction.Commit();
@@ -159,7 +162,8 @@ namespace file_system_database {
 				size = fi.Length;
 			}
 			catch (FileNotFoundException) {
-				Debug.WriteLine("Could not find file: " + path);
+				Debug.WriteLine("Could not find file: " + path); //TODO remove once logging is working
+				logger.Warn("Could not find file: " + path);
 			}
 			string extension = fi.Extension;
 			return new FileData(-1, name, path, extension, size, parentIndex);
@@ -175,6 +179,7 @@ namespace file_system_database {
 			//end execution if max search depth is reached.
 			if (maxDepth > 0 && searchDepth >= maxDepth) {
 				searchDepth--;
+				logger.Debug("Max search depth excceded on folder: " + path);
 				return;
 			}
 
@@ -187,12 +192,14 @@ namespace file_system_database {
 				paths = Directory.GetDirectories(path);
 			}
 			catch (UnauthorizedAccessException) {
-				Debug.WriteLine("Access Denied: " + path);
+				Debug.WriteLine("Access Denied: " + path); //TODO remove when logging is working
+				logger.Warn("Access Denied: " + path);
 				searchDepth--;
 				return;
 			}
 			catch (DirectoryNotFoundException) {
-				Debug.WriteLine("Could not Find: " + path);
+				Debug.WriteLine("Could not Find: " + path);//TODO remove when logging is working
+				logger.Warn("Could not Find: " + path);
 				searchDepth--;
 				return;
 			}
@@ -340,6 +347,7 @@ namespace file_system_database {
 			using (var reader = command.ExecuteReader()) {
 				while (reader.Read()) return reader.GetInt32(0);
 			}
+			logger.Fatal("Database does not contain a folder with path: " + folder);
 			throw new System.Data.RowNotInTableException("Database does not contain a folder with path: " + folder);
 		}
 
@@ -482,7 +490,8 @@ namespace file_system_database {
 			//create the directory
 			string dir = outputFolder + "\\" + basename.Replace(":", "");
 			if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
-			else Debug.WriteLine("The folder " + dir + " already exists");
+			else logger.Warn("The folder " + dir + " already exists");
+				//Debug.WriteLine("The folder " + dir + " already exists");
 
 			//get paths of child folders
 			QueryCommand.CommandText = "SELECT folder_path FROM folders WHERE parent = \"" + index + "\"";
