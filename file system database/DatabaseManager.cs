@@ -40,7 +40,7 @@ namespace file_system_database {
 		/// Prepares parameters and commands for use.
 		/// This must be called after creating a transaction that will use these commands and must be called again after committing that transaction.
 		/// </summary>
-		void PrepCommands() {
+		private void PrepCommands() {
 			//Command for adding files to DB
 			FileCommand = connection.CreateCommand();
 			FileCommand.CommandText = "INSERT INTO files(basename, file_path, extension, size, parent) VALUES($basename, $path, $extension, $size, $parent) ";
@@ -147,7 +147,7 @@ namespace file_system_database {
 		/// <param name="path">The full path to the file</param>
 		/// <param name="parentIndex">The index of the parent folder in the database</param>
 		/// <returns>a FileData struct with the gathered information</returns>
-		FileData ScanFile(string path, int parentIndex) {
+		private FileData ScanFile(string path, int parentIndex) {
 			long size = 0;
 			FileInfo fi = new(path);
 			string name = fi.Name;
@@ -276,7 +276,7 @@ namespace file_system_database {
 		/// insert file data in bulk
 		/// </summary>
 		/// <param name="files">FileData for each row</param>
-		void AddFilesToDatabase(List<FileData> files) {
+		private void AddFilesToDatabase(List<FileData> files) {
 
 			foreach (FileData data in files) {
 				FparamBasename.Value = data.GetName();
@@ -292,7 +292,7 @@ namespace file_system_database {
 		/// Insert folder data in bulk
 		/// </summary>
 		/// <param name="folders">FolderData for each row</param>
-		void AddFoldersToDatabase(List<FolderData> folders) {
+		private void AddFoldersToDatabase(List<FolderData> folders) {
 
 			foreach (FolderData data in folders) {
 				DparamBasename.Value = data.GetName();
@@ -308,7 +308,7 @@ namespace file_system_database {
 		/// </summary>
 		/// <param name="folders">Filepaths of the folders</param>
 		/// <returns>Dictionary of Ids using the filepath as the key</returns>
-		Dictionary<string, int> FolderIDs(string[] folders) {
+		private Dictionary<string, int> FolderIDs(string[] folders) {
 			Dictionary<string, int> ids = new();
 			if (folders.Length == 0) return ids;
 			string query = FormatInQuery(folders);
@@ -326,7 +326,7 @@ namespace file_system_database {
 		/// </summary>
 		/// <param name="folder">Filepath of the folder</param>
 		/// <returns>rowid from the corresponding database row</returns>
-		int FolderIndex(string folder) {
+		private int FolderIndex(string folder) {
 			var command = connection.CreateCommand();
 			command.CommandText = "SELECT rowid FROM folders WHERE folder_path = $path";
 			var paramfolder = command.CreateParameter();
@@ -344,7 +344,7 @@ namespace file_system_database {
 		/// </summary>
 		/// <param name="items">an array of strings</param>
 		/// <returns>A comma delimited string of input values</returns>
-		static string FormatInQuery(string[] items) {
+		static string FormatInQuery(string[] items) { //TODO consider making this public
 			StringBuilder sb = new("");
 			foreach (string item in items) {
 				string clean = item.Replace("\"", "\"\"");
@@ -361,7 +361,7 @@ namespace file_system_database {
 		/// </summary>
 		/// <param name="items">a List of strings</param>
 		/// <returns>A comma delimited string of input values</returns>
-		static string FormatInQuery(List<int> items) {
+		static string FormatInQuery(List<int> items) { //TODO consider making this public
 			StringBuilder sb = new("");
 			foreach (int item in items) {
 				sb.Append(",\"");
@@ -407,7 +407,7 @@ namespace file_system_database {
 		/// <summary>
 		/// creates and runs a vacuum command
 		/// </summary>
-		void Vacuum() {
+		private void Vacuum() {
 			var command = connection.CreateCommand();
 			command.CommandText = "VACUUM";
 			command.ExecuteNonQuery();
@@ -455,7 +455,7 @@ namespace file_system_database {
 			recreateFolderStructure(referenceFolder, outputFolder);
 		}
 
-		void recreateFolderStructure(string referenceFolder, string outputFolder) {
+		private void recreateFolderStructure(string referenceFolder, string outputFolder) {
 
 			int index;
 			//handle referenceFolder having an extra backslash at the end
