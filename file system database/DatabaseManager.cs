@@ -508,14 +508,19 @@ namespace file_system_database {
 				folders = GetSubfolders(referenceFolder);
 				outFolder = outFolder + referenceFolder[..1] + "\\";
 				refFolder = referenceFolder;
+				folders.Add(FolderIndex(referenceFolder));
 			} else if (referenceFolder.EndsWith('\\')) {
 				refFolder = referenceFolder[..(referenceFolder.Length - 1)]; //remove extra '\'
 				folders = GetSubfolders(refFolder);
+				folders.Add(FolderIndex(refFolder));
 				refFolder = refFolder[..refFolder.LastIndexOf("\\")];
 			} else {
 				folders = GetSubfolders(referenceFolder);
 				refFolder = referenceFolder[..referenceFolder.LastIndexOf("\\")];
+				folders.Add(FolderIndex(referenceFolder));
 			}
+
+			//folders.Add(FolderIndex(referenceFolder));
 
 			//get paths of files residing in the folders
 			string parentQuery = FormatInQuery(folders);
