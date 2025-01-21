@@ -192,6 +192,11 @@ namespace file_system_database {
 				searchDepth--;
 				return;
 			}
+			catch (IOException) {
+				Debug.WriteLine("IOException thrown on " + path);
+				searchDepth--;
+				return;
+			}
 
 			//save data for each folder to a struct and add to the list.
 			foreach (string directory in paths) {
@@ -362,9 +367,7 @@ namespace file_system_database {
 		static string FormatInQuery(List<int> items) { //TODO consider making this public
 			StringBuilder sb = new("");
 			foreach (int item in items) {
-				sb.Append(",\"");
-				sb.Append(item);
-				sb.Append('\"');
+				sb.Append(",\"").Append(item).Append('\"');
 			}
 			string query = sb.ToString();
 			return query[1..];
