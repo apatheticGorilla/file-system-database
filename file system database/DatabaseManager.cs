@@ -348,9 +348,7 @@ namespace file_system_database {
 			StringBuilder sb = new("");
 			foreach (string item in items) {
 				string clean = item.Replace("\"", "\"\"");
-				sb.Append(",\"");
-				sb.Append(clean);
-				sb.Append('\"');
+				sb.Append(",\"").Append(clean).Append('\"');
 			}
 			string query = sb.ToString();
 			return query[1..];
