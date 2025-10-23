@@ -126,7 +126,7 @@ namespace file_system_database {
 			command.ExecuteNonQuery();
 
 			maxDepth = maxSearchDepth;
-			List<FolderData> folderData = new();
+			List<FolderData> folderData = [];
 			foreach (string path in paths) {
 				DirectoryInfo dirInfo = new(path);
 				folderData.Add(new FolderData(dirInfo.Name, path, -1));
@@ -174,8 +174,8 @@ namespace file_system_database {
 				return;
 			}
 
-			List<FileData> fileData = new();
-			List<FolderData> folderData = new();
+			List<FileData> fileData = [];
+			List<FolderData> folderData = [];
 
 			//attempt to get directories or end execution if failed
 			string[] paths;
@@ -232,7 +232,7 @@ namespace file_system_database {
 		/// <param name="maxSearchDepth">Folders and files deeper than this number will not be searched. Set to 0 to disable.</param>
 		public void AddFolder(string path, int maxSearchDepth) {
 			maxDepth = maxSearchDepth;
-			List<FolderData> folderData = new();
+			List<FolderData> folderData = [];
 			DirectoryInfo di = new(path);
 			int index = -1;
 
@@ -253,9 +253,9 @@ namespace file_system_database {
 		public void RemoveFolder(string path) {
 			var transaction = connection.BeginTransaction();
 			PrepCommands();
-			List<int> indexes = new() {
+			List<int> indexes = [
 				FolderIndex(path)
-			};
+			];
 
 			//get children
 			indexes.AddRange(GetSubfolders(indexes));
@@ -314,7 +314,7 @@ namespace file_system_database {
 		/// <param name="folders">Filepaths of the folders</param>
 		/// <returns>Dictionary of Ids using the filepath as the key</returns>
 		private Dictionary<string, int> FolderIDs(string[] folders) {
-			Dictionary<string, int> ids = new();
+			Dictionary<string, int> ids = [];
 			if (folders.Length == 0) return ids;
 			string query = FormatInQuery(folders);
 			QueryCommand.CommandText = "SELECT Folder_path, rowid FROM folders WHERE folder_path IN(" + query + ")";
@@ -379,7 +379,7 @@ namespace file_system_database {
 		/// <param name="folders">Indexes of the folders to query</param>
 		/// <returns>Indexes of all child folders</returns>
 		List<int> GetSubfolders(List<int> folders) {
-			List<int> subfolders = new();
+			List<int> subfolders = [];
 			string query = FormatInQuery(folders);
 			QueryCommand.CommandText = "SELECT rowid FROM folders WHERE parent IN(" + query + ")";
 			using (var reader = QueryCommand.ExecuteReader()) {
@@ -398,9 +398,9 @@ namespace file_system_database {
 		/// <param name="folderPath">File path of the folder to query</param>
 		/// <returns>Indexes of all child folder</returns>
 		List<int> GetSubfolders(string folderPath) {
-			List<int> folder = new() {
+			List<int> folder = [
 				FolderIndex(folderPath)
-			};
+			];
 
 			return GetSubfolders(folder);
 		}
@@ -429,7 +429,7 @@ namespace file_system_database {
 		/// <param name="extension">The file extension to search for I.E ".txt"</param>
 		/// <returns>A list of FileData objects</returns>
 		public List<FileData> FilesWithExtension(string extension) {
-			List<FileData> values = new();
+			List<FileData> values = [];
 			PrepCommands();
 			QueryCommand.CommandText = "SELECT * FROM files WHERE extension=\"" + extension + "\"";
 			using (var reader = QueryCommand.ExecuteReader()) {
@@ -483,7 +483,7 @@ namespace file_system_database {
 
 			//get paths of child folders
 			QueryCommand.CommandText = "SELECT folder_path FROM folders WHERE parent = \"" + index + "\"";
-			List<string> children = new();
+			List<string> children = [];
 			using (var reader = QueryCommand.ExecuteReader()) {
 				while (reader.Read()) children.Add(reader.GetString(0));
 			}
@@ -526,7 +526,7 @@ namespace file_system_database {
 			//get paths of files residing in the folders
 			string parentQuery = FormatInQuery(folders);
 			QueryCommand.CommandText = "SELECT file_path FROM files WHERE parent IN(" + parentQuery + ")";
-			List<string> files = new();
+			List<string> files = [];
 			using (var reader = QueryCommand.ExecuteReader()) {
 				while (reader.Read()) files.Add(reader.GetString(0));
 			}
