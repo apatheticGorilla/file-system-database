@@ -1,22 +1,14 @@
 ﻿namespace file_system_database {
 
 
-	public readonly struct FileData {
-		readonly int fileID;
-		readonly string name;
-		readonly string path;
-		readonly string extension;
-		readonly long size;
-		readonly int parentIndex;
+	public readonly struct FileData(int fileID, string name, string path, string extension, long size, int parentIndex) {
+		readonly int fileID = fileID;
+		readonly string name = name;
+		readonly string path = path;
+		readonly string extension = extension;
+		readonly long size = size;
+		readonly int parentIndex = parentIndex;
 
-		public FileData(int fileID, string name, string path, string extension, long size, int parentIndex) {
-			this.fileID = fileID;
-			this.name = name;
-			this.path = path;
-			this.parentIndex = parentIndex;
-			this.extension = extension;
-			this.size = size;
-		}
 		public int GetFileID() { return fileID; }
 		public string GetName() { return name; }
 		public string GetPath() { return path; }
